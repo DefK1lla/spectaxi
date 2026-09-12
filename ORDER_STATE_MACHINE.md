@@ -6,153 +6,175 @@
 
 ## 2) Состояния заказа
 
-- `published` — ожидание первого ответа или клиент выбирает следующего исполнителя (только пока не началась работа; после срыва с `in_progress`+ поиск в этом заказе нельзя).
-- `in_negotiation` — первое принятие, контакты открыты, переговоры. Сюда же возврат, если исполнитель отклонил подтверждение цены.
-- `assigned` — заказчик отправил оговоренную цену на подтверждение. Таймера нет.
-- `awaiting_payment` — оба приняли цену, режим `secure_deal`, холд ещё не успешен. Клиент видит форму оплаты, исполнитель — что заказ не оплачен. Срок оплаты 1 сутки, иначе автоотмена. При `direct_payment` этого статуса нет.
-- `in_progress` — работа началась (`direct_payment` сразу после принятия цены; `secure_deal` после успешного холда).
-- `completed` — исполнитель сдал заказ. Отмены нет. Клиент за 1 сутки принимает или не принимает работу; молчание → автоприёмка. Непринятие → `disputed`. После принятия заказ остаётся `completed`, кнопка спора остаётся.
-- `disputed` — спор или апелляция. Пользователи не отменяют. Закрывает админ из админки. На заказ максимум два треда (спор + одна апелляция).
-- `cancelled` — полная отмена до начала работы, автоотмена за неоплату, либо исход спора в админке. С `cancelled` можно апелляцию, если лимит не исчерпан.
+- `draft` — сохранён, запрос не отправлен, в поиске исполнителей не участвует.
+- `published` — идёт поиск исполнителя: ждут первое «принять» или клиент выбирает следующего. Сюда же заказ **возвращается**, если матч сорвался **до** `in_progress`.
+- `in_negotiation` — запрос принят, контакты открыты. Заказчик правит детали, исполнитель жмёт «подтвердить условия» (срок **1 сутки**). Статуса `assigned` нет: сумму считает система.
+- `awaiting_payment` — условия подтверждены, режим `secure_deal`, холд ещё не успешен. При `direct_payment` этого статуса нет.
+- `in_progress` — работа идёт. Выход: обе стороны подтвердили исполнение, либо спор. Поиска на этом заказе больше нет.
+- `completed` — обе подтвердили исполнение (или автоподтверждение молчащего). Отмены нет. Спор и отзывы доступны.
+- `disputed` — открыт спор (одна запись на заказ). Пользователи не отменяют. Закрывает админ.
+- `cancelled` — полная отмена кнопкой до работы, отказ от черновика, либо исход спора.
 
-## 3) Допустимые переходы заказа
+## 3) Возврат на поиск (пока не `in_progress`)
 
-- `published -> in_negotiation` — первое «принять» до истечения 5 минут
-- `published -> cancelled` — отмена кнопкой **без причины**
-- `in_negotiation -> assigned`
-- `in_negotiation -> published` — отклонение партнёра (поиск в этом заказе)
+Пока заказ не в `in_progress`, срыв матча **не хоронит** заказ: тот же `orders`, статус `published`, клиент ищет другого. Полная отмена кнопкой по-прежнему переводит в `cancelled`.
+
+Возврат на поиск:
+
+- отказ исполнителя на запросе;
+- таймаут 5 минут (не ответил = отказ);
+- клиент снял запрос (`withdrawn`);
+- отклонение партнёра в переговорах;
+- исполнитель не подтвердил условия за 1 сутки;
+- исполнитель принял **другой** заказ на пересекающееся время;
+- клиент не оплатил безопасную сделку за 1 сутки.
+
+После `in_progress` поиск на этом заказе не возобновляется. Нужен новый заказ (`repeat`).
+
+## 4) Допустимые переходы
+
+- `draft -> published` — отправка запроса
+- `draft -> cancelled` — отказ от черновика
+- `published -> in_negotiation` — «принять запрос» до 5 минут
+- `published -> cancelled` — отмена без причины
+- `in_negotiation -> in_negotiation` — заказчик сохранил правку (`details_version++`, сброс подтверждения, дедлайн подтверждения условий заново +1 сутки)
+- `in_negotiation -> published` — отклонение партнёра, таймаут подтверждения условий, исполнитель принял другой заказ
 - `in_negotiation -> cancelled`
-- `assigned -> in_progress` — исполнитель принял цену, `direct_payment`
-- `assigned -> awaiting_payment` — исполнитель принял цену, `secure_deal`
-- `assigned -> in_negotiation` — исполнитель не согласился с ценой
-- `assigned -> published` — отклонение партнёра
-- `assigned -> cancelled`
-- `awaiting_payment -> in_progress` — холд успешен
-- `awaiting_payment -> cancelled` — отмена кнопкой **или** автоотмена через 1 сутки без оплаты
-- `awaiting_payment -> disputed` — провайдер вернул холд по `expires_at`
-- `in_progress -> completed` — исполнитель сдал заказ
-- `in_progress -> disputed` — кнопка спора или апелляция
-- `completed -> disputed` — клиент не принял работу, кнопка спора, апелляция, либо `expires_at`
-- `cancelled -> disputed` — только апелляция (лимит 1)
-- `disputed -> completed` — только админка
-- `disputed -> cancelled` — только админка
-- `disputed -> in_progress` — только админка
+- `in_negotiation -> awaiting_payment` — «подтвердить условия», `secure_deal`
+- `in_negotiation -> in_progress` — «подтвердить условия», `direct_payment`
+- `awaiting_payment -> in_negotiation` — заказчик изменил детали: отменить/вернуть холд или незавершённый платёж, версия++, исполнителю снова подтверждать
+- `awaiting_payment -> in_progress` — холд `authorized`
+- `awaiting_payment -> published` — таймаут 1 сутки без оплаты: платёж отменить, клиенту −3, тот же заказ снова в поиске
+- `awaiting_payment -> cancelled` — отмена кнопкой (если был платёж/холд — отменить/вернуть)
+- `awaiting_payment -> disputed` — **только если** платёж уже `authorized` и провайдер вернул холд по `expires_at` (на практике после `authorized` заказ уже `in_progress`; этот переход — защита, если статус платежа и заказа разошлись)
+- `in_progress -> completed` — оба подтвердили исполнение (или автоподтверждение через 1 сутки после первого)
+- `in_progress -> disputed` — спор
+- `completed -> disputed` — спор или апелляция
+- `cancelled -> disputed` — только апелляция
+- `disputed -> completed` | `cancelled` | `in_progress` — только админка
 
 Нельзя:
-- спор из `published` / `in_negotiation` / `assigned` / `awaiting_payment`;
+
+- спор из `draft` / `published` / `in_negotiation` / `awaiting_payment`;
 - отмена кнопкой из `in_progress` / `completed` / `disputed`;
-- `disputed -> published` и любой новый поиск исполнителей на этом же заказе после начала работы;
-- отмена из `completed`.
+- вернуть заказ в `published` после начала работы;
+- «подтвердить условия» с устаревшим `details_version` (`409 STALE_ORDER_DETAILS`).
 
-Не меняют статус заказа:
-- отказ или таймаут 5 минут на первом запросе → кандидат закрыт, заказ `published`; исполнителю −2 к рейтингу за таймаут;
-- клиент снял запрос до ответа → кандидат закрыт, заказ `published`.
+Не меняют статус заказа (остаётся `published`):
 
-`409 INVALID_STATE_TRANSITION` на недопустимый переход.  
-`409 ORDER_NO_LONGER_RELEVANT` — исполнитель открыл заказ, по которому он уже не актуальный кандидат.  
-`409 CANCEL_NOT_ALLOWED` — отмена кнопкой на запрещённом статусе.  
-`409 DISPUTE_NOT_ALLOWED` — спор не с `in_progress` / `completed` (апелляция — отдельно).  
-`409 APPEAL_LIMIT_REACHED` — апелляция уже использована.  
-`409 APPEAL_NOT_ALLOWED` — нет закрытого админом спора.
+- отказ или таймаут 5 минут на первом запросе → кандидат закрыт; исполнителю **−3**;
+- клиент снял запрос до ответа → `withdrawn`.
 
-## 4) Состояния платежа (`secure_deal`)
+`409 INVALID_STATE_TRANSITION`  
+`409 ORDER_NO_LONGER_RELEVANT`  
+`409 CANCEL_NOT_ALLOWED`  
+`409 DISPUTE_NOT_ALLOWED`  
+`409 APPEAL_LIMIT_REACHED` / `409 APPEAL_NOT_ALLOWED`  
+`409 UNIT_OCCUPIED` — слот единицы уже занят (принял другой заказ)
 
-- `not_required` — для `direct_payment` всегда.
+## 5) Платёж (`secure_deal`)
+
+- `not_required` — всегда для `direct_payment`.
 - `pending`, `authorized`, `captured`, `failed`, `cancelled`, `refunded`.
 
-Холд создаётся на `awaiting_payment`, после того как оба приняли оговорённую цену. До успешного холда заказ не `in_progress`.
+Холд создаётся **после** «подтвердить условия», на `awaiting_payment`, когда клиент открыл оплату. Сумма всегда `order_pricing.computed_amount`, клиент сумму не передаёт. Пока клиент не создал платёж, у провайдера нет холда и **нечего возвращать**.
 
-Клиент подтвердил `completed` **или** сработал таймаут 1 сутки (автоприёмка) — выплата исполнителю (`captured` / payout). Автоприёмка: исполнителю плюс успешного заказа, клиенту **−3** (`late_confirm`). Автоотмена неоплаты: клиенту **−3** (`payment_timeout`).
+Истечение **наших** суток без оплаты → заказ **`published`** (поиск исполнителя), платёж `cancelled`, клиенту −3, без `disputed` и без `cancelled` заказа.
 
-Спор / апелляция на `in_progress` / `completed` / `cancelled` (апелляция) или автопереход из-за `expires_at`:
-- статус заказа → `disputed`;
-- новый тред (у заказа уже может быть закрытый);
-- деньги не двигать, пока админ не закроет: исход **следует решению** (`completed` — выплата или оставляем выплаченное; `cancelled` — возврат, в том числе уже выплаченного).
+Правка деталей на `awaiting_payment`: отменить `pending` / вернуть холд, если уже есть; заказ → `in_negotiation`.
 
-Закрытие спора (только админка, статусы `completed` | `cancelled` | `in_progress`):
-- целевой статус `completed` — выплата исполнителю, если ещё не выплачено; рейтинг успешного заказа один раз на заказ;
-- целевой статус `cancelled` — возврат клиенту;
-- целевой статус `in_progress` — холд/выплата сами не меняются.
+`expires_at` провайдера имеет смысл только при `authorized`. Тогда возврат холда провайдером → заказ `disputed`, ждём админа.
 
-После закрытия стороны могут один раз открыть апелляцию (новый тред, заказ снова `disputed`). Второго раза нет.
+Оба подтвердили `completed` (или автоподтверждение) — выплата (`captured`). После `captured` платформа **больше не двигает деньги**: админ в споре может только санкции (рейтинг, блокировка), не возврат и не повторную выплату.
 
-Срок оплаты на `awaiting_payment`: `payment_deadline_at` = вход в статус + **1 сутки**. Истечение → `cancelled`, `cancelled_by_role = system`, минус клиенту. Если платёж уже создан — отменить/вернуть.
+Закрытие спора админом:
 
-Срок ответа на сдачу: `completion_review_deadline_at` = вход в `completed` + **1 сутки**. Истечение → автоприёмка (как `confirmed`). Оба срока — в правилах сервиса.
+- холд ещё `authorized` (не `captured`) — админ может выплатить или вернуть, как раньше;
+- уже `captured` — денег не трогать, только статус заказа и санкции к пользователям;
+- платежа не было — денег нет.
 
-## 5) Кандидаты, таймер, повтор
+## 6) Кандидаты, версии, повтор
 
-На `published` не более одного кандидата в `notified` / `viewed`.
+На `published` не более одного кандидата `notified`. Статуса `viewed` нет: открытие из уведомления ничего не меняет. Принял — принял, отказал — отказал, не ответил за 5 минут — это отказ.
 
-Статусы кандидата:
-- `notified`, `viewed`;
-- `accepted` — первое принятие;
-- `declined` — отказ исполнителя на первом запросе;
-- `expired` — нет ответа 5 минут;
-- `withdrawn` — клиент снял запрос до ответа;
-- `negotiation_rejected` — клиент или исполнитель отклонил переговоры.
+Статусы кандидата: `notified`, `accepted`, `declined`, `expired`, `withdrawn`, `negotiation_rejected`, `terms_expired`, `lost_to_other_order`.
 
-Правила повторного запроса тому же исполнителю на этот заказ:
-- после `declined` или `negotiation_rejected` — нельзя, в поиске по заказу скрыт;
-- после `expired` — можно (новая запись кандидата);
-- после `withdrawn` — можно;
-- на `assigned` и `in_negotiation` отклонение партнёра любой стороной = `negotiation_rejected`.
+Повтор тому же исполнителю на этот заказ:
 
-Первый ответ: `response_deadline_at = notified_at + 5 минут`. Гонка accept/expiry атомарна. На `assigned` и `awaiting_payment` таймера первого ответа нет.
+- нельзя после `declined`, `expired`, `negotiation_rejected`, `terms_expired` (не ответил / не подтвердил = отказ, скрыт);
+- можно после `withdrawn` (клиент сам снял);
+- можно после `lost_to_other_order`, если единица снова свободна в окне (поиск сам скрывает, пока слот занят).
 
-Срок ответа клиента на сдачу работы: `completion_review_deadline_at` = момент перехода в `completed` + **1 сутки**; иначе автоприёмка.  
-Срок оплаты: `payment_deadline_at` = вход в `awaiting_payment` + **1 сутки**; иначе автоотмена.
+Первый ответ: `response_deadline_at = notified_at + 5 минут`. Плановый заказ — тот же таймер.
 
-`order_assignment` создаётся, когда оба приняли цену: переход в `awaiting_payment` или сразу в `in_progress` при `direct_payment` (уникален по `order_id`).
+Подтверждение условий: `terms_confirm_deadline_at = момент входа в in_negotiation + 1 сутки` (сбрасывается при правке деталей). Не подтвердил — кандидат `terms_expired`, заказ `published`, исполнитель скрыт, исполнителю **−3**.
 
-Новый такой же заказ (`POST /orders/{id}/repeat`): с `cancelled`; с `completed` только после принятия (клиент или автоприёмка). Старый заказ не переводится в `published`.
+`details_version` начинается с 1 при переходе в `in_negotiation`. Правка заказчика: +1, исполнителю уведомление. «Подтвердить условия» передаёт `details_version`; несовпадение — `409 STALE_ORDER_DETAILS`.
 
-## 6) Диаграмма автомата заказа (Mermaid)
+`order_assignment` при «подтвердить условия». При возврате на поиск назначение снимается.
+
+`execution_confirmed_by_client_at` / `execution_confirmed_by_executor_at`: когда оба не null — `completed`. Если один подтвердил, второй молчит 1 сутки — автоподтверждение. Дедлайн второго подтверждения: `execution_confirm_deadline_at` = время **первого** из двух подтверждений + 1 сутки. Это не «отзыв клиента», а срок, за который вторая сторона должна нажать «работа выполнена».
+
+Repeat: с `cancelled`; с `completed` после фиксации исполнения. С `published` после срыва матча repeat не нужен — это тот же заказ.
+
+### 6.1) Гонка двух запросов на одно время
+
+`published` слот не занимает. Исполнителю могут одновременно прийти два и больше запроса с пересекающимся окном.
+
+Кто первый атомарно нажал «принять» — тот в `in_negotiation`, слот единицы занят.
+
+Остальным кандидатам на **эту же единицу** с пересекающимся окном:
+
+- статус `lost_to_other_order`;
+- клиентам уведомление: исполнитель принял другой заказ;
+- их заказы → `published` (поиск продолжается на том же заказе).
+
+Повторный `accept` на уже занятую единицу — `409 UNIT_OCCUPIED`, этот кандидат тоже `lost_to_other_order`, заказ клиента остаётся `published`.
+
+## 7) Диаграмма
 
 ```mermaid
 stateDiagram-v2
-    [*] --> published: client_sends_request
+    [*] --> draft: save_draft
+    [*] --> published: send_request
 
-    published --> in_negotiation: first_accept
+    draft --> published: send_request
+    draft --> cancelled: discard_draft
+
+    published --> in_negotiation: accept_request
     published --> cancelled: cancel_no_reason
 
-    in_negotiation --> assigned: client_submits_agreed_price
-    in_negotiation --> published: either_rejects_partner
+    in_negotiation --> published: reject_partner
+    in_negotiation --> published: terms_timeout
+    in_negotiation --> published: took_other_order
     in_negotiation --> cancelled: cancel_by_either
+    in_negotiation --> awaiting_payment: confirm_terms_secure
+    in_negotiation --> in_progress: confirm_terms_direct
 
-    assigned --> in_progress: executor_accepts_direct
-    assigned --> awaiting_payment: executor_accepts_secure_deal
-    assigned --> in_negotiation: executor_rejects_price
-    assigned --> published: either_rejects_partner
-    assigned --> cancelled: cancel_by_either
-
+    awaiting_payment --> in_negotiation: client_edits_refund
     awaiting_payment --> in_progress: hold_authorized
-    awaiting_payment --> cancelled: cancel_or_payment_timeout
-    awaiting_payment --> disputed: provider_hold_expired
+    awaiting_payment --> published: unpaid_timeout
+    awaiting_payment --> cancelled: cancel_button
+    awaiting_payment --> disputed: authorized_hold_expired
 
-    in_progress --> completed: executor_completes
-    in_progress --> disputed: open_dispute_or_appeal
+    in_progress --> completed: both_confirm_execution
+    in_progress --> disputed: open_dispute
 
-    completed --> disputed: decline_dispute_appeal_or_hold_expired
+    completed --> disputed: dispute_or_appeal
     cancelled --> disputed: appeal
 
     disputed --> completed: admin_close
     disputed --> cancelled: admin_close
     disputed --> in_progress: admin_close
-
-    completed --> [*]
-    cancelled --> [*]
 ```
 
-Спор только из `in_progress` и `completed` (плюс системный переход по `expires_at`). В `published` после спора заказ не возвращают. Закрытие с выбором статуса — только админка.
+## 8) Аудит
 
-## 7) Аудит
+`order_status_events`: черновик, запрос, снятие, принять/отказ/таймаут, правки деталей, подтвердить условия, холд, возврат холда, таймаут неоплаты (возврат в поиск), подтверждения исполнения, спор, апелляция, отмена.
 
-Писать в `order_status_events`: запрос, снятие, первое принятие/отказ/таймаут, контакты, отказ переговоров, цена, `awaiting_payment`, холд, автоотмена неоплаты, завершение, подтверждение / автоприёмка, `disputed`, апелляция, отмена. Сообщения спора не дублировать статусом.
+Рейтинг — `RATING_PLAN.md`. Таймаут 5 минут и таймаут подтверждения условий: исполнителю **−3**. Неоплата: клиенту **−3**.
 
-Отмена, спор, автоприёмка и автоотмена неоплаты обновляют рейтинги по `RATING_PLAN.md`. Таймаут 5 минут: исполнителю −2.
+## 9) Feature-флаги
 
-## 8) Feature-флаги
-
-- `secure_deal_enabled` — без флага путь `awaiting_payment` не используется, только `direct_payment`.
-- `executor_subscription_enabled`
+- `secure_deal_enabled` — без флага только `direct_payment`, нет `awaiting_payment`.
+- `executor_subscription_enabled` — в MVP **выключен**; включение требует оплаты подписки для приёма заказов.

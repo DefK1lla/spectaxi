@@ -1,364 +1,219 @@
 # Доменная модель и ERD (MVP)
 
-## 1) Цель документа
+## 1) Цель
 
-Документ описывает минимальную доменную модель для запуска MVP маркетплейса спецтехники:
-- без обязательной «Безопасной сделки»;
-- без внутреннего денежного баланса;
-- с поддержкой прямой оплаты и последующего подключения платежного провайдера.
+Минимальная модель MVP: без обязательной безопасной сделки, без внутреннего кошелька. Выровнена с `USER_SCENARIOS.md`.
 
-Модель выровнена с `USER_SCENARIOS.md`.
-
-## 2) Основные сущности
+## 2) Сущности
 
 ### `users`
 
-Один пользователь может быть и клиентом, и исполнителем.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `phone` (уникальный, логин);
-- `full_name`;
-- `contact_phone` (nullable) — контакт, не логин; вместе с `full_name` обязателен для создания и принятия заказа;
-- `messengers_json` (JSONB: массив `{ "name": "строка", "url": "строка" }`; в UI кнопка «добавить мессенджер» добавляет ещё одну пару полей);
-- `is_client_enabled` (bool);
-- `is_executor_enabled` (bool);
-- `rating_as_client` (внутренний, не для UI; отмена, срыв переговоров, несогласие с ценой);
-- `rating_as_executor` (внутренний, не для UI; те же события плюс таймаут −2);
+- `id`, `phone` (unique, логин), `full_name`;
+- `current_mode` (`client` | `executor`) — единственное поле роли; задаётся при регистрации, меняется переключением;
+- `contact_phone` (nullable);
+- `telegram_url`, `whatsapp_url`, `max_url` (nullable);
+- `messengers_json` (доп. пары `{ name, url }`);
+- `rating_as_client`, `rating_as_executor` (внутренние, в UI нет);
+- `blocked_at`, `blocked_reason` (nullable, бан админом);
 - `created_at`, `updated_at`.
+
+Нет `default_mode`, `is_client_enabled`, `is_executor_enabled`.
+
+Для создания и принятия заказа: непустой `full_name` и хотя бы один канал из `contact_phone` / `telegram_url` / `whatsapp_url` / `max_url` / непустого `messengers_json`.
 
 ### `executor_profiles`
 
-Расширение роли исполнителя.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `user_id` (FK -> users.id, unique);
-- `accepts_orders` (bool);
-- `avatar_url` (nullable);
-- `about` (nullable);
-- `is_verified`;
-- `subscription_status` (`trial`, `active`, `paused`, `expired`);
+- `user_id` unique, `accepts_orders`, `avatar_url`, `about`;
+- `subscription_status` (`none`, `active`, `paused`, `expired`);
+- `subscription_expires_at` (nullable);
 - `created_at`, `updated_at`.
+
+Создаётся при регистрации в режиме исполнителя или при первом переключении на исполнителя.
+
+Пока `executor_subscription_enabled = false`, статус не ограничивает поиск.
 
 ### `machinery_categories`
 
-Справочник типов транспорта. Стартовый набор и связь с тарифами — `TARIFF_TYPES.md`.
+Строка таблицы **и есть** конфиг типа транспорта. Отдельного JSON `license_config` нет.
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `code` (уникальный);
-- `name_ru`;
+- `id`;
+- `code` unique — внутреннее системное обозначение типа транспорта;
+- `name_ru` — текст для интерфейса;
+- `license_category` (nullable) — категория водительских прав (например `B`); `null` — лицензия для типа не нужна;
 - `is_active`;
 - `created_at`, `updated_at`.
 
+Селект при создании машины — строки этой таблицы.
+
 ### `pricing_types`
 
-Справочник типов тарифа.
-
-Ключевые поля:
-- `code` (PK: `hour`, `shift`, `day`, `month`, `trip`, `km`);
-- `name_ru`;
-- `is_active`.
+- `code` PK (`hour`, `shift`, `day`, `month`, `trip`, `km`);
+- `name_ru`.
 
 ### `category_pricing_types`
 
-Какие тарифы можно выбрать для категории. Исполнитель видит только эти типы.
-
-Ключевые поля:
-- `category_id` (FK -> machinery_categories.id);
-- `pricing_type_code` (FK -> pricing_types.code);
-- PK `(category_id, pricing_type_code)`.
+- `category_id`, `pricing_type_code` — PK;
+какие тарифы разрешены типу. Источник истины для UI и API, не хардкод клиента.
 
 ### `machinery_units`
 
-Единица транспорта исполнителя. У одного профиля неограниченное число единиц.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `executor_profile_id` (FK -> executor_profiles.id);
-- `category_id` (FK -> machinery_categories.id) — тип транспорта;
-- `address_text` — локация, поле с автокомплитом;
-- `location_lat`, `location_lng`;
+- `id`, `executor_profile_id`, `category_id`;
+- `address_text`, `location_lat`, `location_lng`;
 - `deleted_at` (nullable, мягкое удаление);
 - `created_at`, `updated_at`.
 
-Правила:
-- создавать и менять может только владелец профиля;
-- лимита на количество единиц нет;
-- подсказки автокомплита локации включают адреса других единиц этого исполнителя;
-- в поиске участвует каждая неудалённая единица, если у владельца `accepts_orders = true` и есть хотя бы один тариф из разрешённых категории;
-- точка на карте — локация этой единицы; несколько единиц с одной точкой группируются.
+Лимита единиц нет.
 
 ### `machinery_photos`
 
-Фотографии единицы транспорта. На вход — файлы, сервер сохраняет и отдаёт `url`.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `machinery_unit_id` (FK -> machinery_units.id);
-- `url`;
-- `sort_order`;
+- `id`, `machinery_unit_id`, `url`, `sort_order`;
 - `created_at`.
+
+Файлы загружает исполнитель, в API с клиента URL не принимаются.
 
 ### `machinery_pricing_rules`
 
-Тарифы единицы транспорта. Не относятся к исполнителю в целом. Платформа не задаёт `base_rate`.
+- `id`, `machinery_unit_id`, `pricing_type`, `base_rate` (> 0), `currency`;
+- `is_active`;
+- unique активных `(machinery_unit_id, pricing_type)`.
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `machinery_unit_id` (FK -> machinery_units.id);
-- `pricing_type` (FK -> pricing_types.code);
-- `currency` (`RUB`);
-- `base_rate` (ставка, заданная исполнителем; > 0);
-- `is_active` (bool, default true);
-- `meta_json` (JSONB: расширяемые параметры);
+Тариф принадлежит единице.
+
+В поиске единица участвует только если: не удалена, `accepts_orders`, подписка ок (если флаг), есть нужный тариф, лицензия категории `approved` либо `license_category` пустой, слот свободен.
+
+### `executor_licenses`
+
+Одна лицензия на пару исполнитель + категория (не на каждую машину).
+
+- `id`;
+- `executor_profile_id`;
+- `category_id`;
+- `license_category` (копия с строки категории на момент подачи);
+- `status` (`pending`, `approved`, `rejected`);
+- `reject_comment` (nullable);
+- `reviewed_by_admin` (nullable);
 - `created_at`, `updated_at`.
 
-Правила:
-- тип должен быть разрешён категории единицы через `category_pricing_types`;
-- у единицы может быть несколько тарифов разных типов;
-- уникальный индекс `(machinery_unit_id, pricing_type)` среди активных правил;
-- менять тарифы может только владелец техники.
+Уникально `(executor_profile_id, category_id)`. Документы — `executor_license_files` (`license_id`, `url`, `created_at`).
+
+Машину без `approved` сохранить можно, в поиске нет.
 
 ### `orders`
 
-Корневая сущность заказа. Обычно создаётся в момент отправки запроса исполнителю. Исключение: «искать снова» после полной отмены — новый заказ в `published` без кандидата (`repeated_from_order_id`).
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `client_user_id` (FK -> users.id);
-- `category_id` (FK -> machinery_categories.id);
-- `settlement_mode` (`direct_payment`, `secure_deal`);
-- `search_mode` (`urgent`, `planned`);
-- `status` (`published`, `in_negotiation`, `assigned`, `awaiting_payment`, `in_progress`, `completed`, `disputed`, `cancelled`);
-- `cancel_reason_code` (nullable, из справочника; фильтр в админке);
-- `cancel_reason_text` (nullable, обязателен при `other`);
-- `cancelled_by_user_id` (nullable);
-- `cancelled_by_role` (nullable: `client` | `executor` | `system`);
-- `completion_review_deadline_at` (nullable: переход в `completed` + 1 сутки);
-- `payment_deadline_at` (nullable: вход в `awaiting_payment` + 1 сутки);
-- `dispute_appeal_used` (bool, default false) — апелляция уже подана;
-- `repeated_from_order_id` (nullable, FK -> orders.id) — новый заказ после «искать снова» с `cancelled` или с принятого `completed`;
-- `address_text` (nullable);
-- `location_lat`, `location_lng` (nullable);
-- `planned_start_at` (nullable, для планового);
-- `planned_duration_minutes` (nullable, для планового);
-- `description` (nullable);
+- `status`: `draft`, `published`, `in_negotiation`, `awaiting_payment`, `in_progress`, `completed`, `disputed`, `cancelled`;
+- `client_user_id`, `category_id`, `settlement_mode` (`direct_payment` | `secure_deal`);
+- `search_mode` (`urgent` | `planned`);
+- `planned_start_on` (date, nullable; обязательно при `planned`, пусто при `urgent`);
+- `occupancy_start_at`, `occupancy_end_at` (считает сервер из режима, даты и тарифа × количества — `SEARCH_ALGORITHM.md`);
+- `details_version` (int, default 1);
+- `address_text`, `location_lat`, `location_lng`, `description`;
+- `terms_confirm_deadline_at` (nullable; вход в `in_negotiation` + 1 сутки, сброс при правке деталей);
+- `payment_deadline_at` (nullable; «подтвердить условия» + 1 сутки при `secure_deal`);
+- `execution_confirmed_by_client_at`, `execution_confirmed_by_executor_at`;
+- `execution_confirm_deadline_at` (nullable) — срок, за который **вторая** сторона должна нажать «работа выполнена»: время первого из двух подтверждений + 1 сутки. Это не дедлайн отзыва и не «проверка клиентом»;
+- `cancel_*`, `cancelled_by_user_id`, `cancelled_by_role` (`client` | `executor` | `system`);
+- `repeated_from_order_id`;
 - `created_at`, `updated_at`.
+
+Нет статуса `assigned`. Нет клиентских `work_start_at` / `work_end_at`.
 
 ### `order_pricing`
 
-Оговоренная цена конкретного заказа. Её указывает заказчик после переговоров, не копируется автоматически из тарифа транспорта.
+Один к заказу. Сумму считает сервер.
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id, unique);
-- `currency` (`RUB`);
-- `agreed_amount` (nullable до отправки на подтверждение исполнителю);
-- `created_at`, `updated_at`.
+- `pricing_type`, `quantity` (> 0), `unit_rate`, `computed_amount` (`unit_rate × quantity`), `currency`.
 
 ### `order_candidates`
 
-Запрос конкретному исполнителю. Одновременно ожидающих ответа кандидатов на заказ — не больше одного.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id);
-- `executor_user_id` (FK -> users.id);
-- `machinery_unit_id` (FK -> machinery_units.id);
-- `candidate_status` (`notified`, `viewed`, `accepted`, `declined`, `expired`, `withdrawn`, `negotiation_rejected`);
-- `reject_reason_code` (nullable);
-- `reject_reason_text` (nullable);
-- `notified_at`;
-- `response_deadline_at` (notified_at + 5 минут для первого ответа);
-- `responded_at` (nullable);
+- `id`, `order_id`, `executor_user_id`, `machinery_unit_id`;
+- `candidate_status`: `notified`, `accepted`, `declined`, `expired`, `withdrawn`, `negotiation_rejected`, `terms_expired`, `lost_to_other_order`;
+- `notified_at`, `response_deadline_at` (`notified_at` + 5 минут);
+- `accepted_at` (nullable);
+- `reject_reason_code`, `reject_reason_text` (nullable);
 - `created_at`, `updated_at`.
 
-Ограничения:
-- не более одного кандидата в статусе `notified` или `viewed` на заказ;
-- нельзя создать новый запрос тому же `executor_user_id` на этот `order_id`, если уже есть `declined` или `negotiation_rejected`;
-- после `expired` и после `withdrawn` новый запрос тому же исполнителю разрешён.
+Статуса `viewed` нет.
+
+На заказ не более одного `notified`. Assignment при «подтвердить условия»; при возврате на поиск снимается.
 
 ### `order_assignments`
 
-Фиксируется, когда оба приняли оговоренную цену: переход в `awaiting_payment` (`secure_deal`) или сразу в `in_progress` (`direct_payment`).
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id);
-- `executor_user_id` (FK -> users.id);
-- `machinery_unit_id` (FK -> machinery_units.id, nullable);
-- `assigned_at`;
+- `id`, `order_id` unique, `executor_user_id`, `machinery_unit_id`;
 - `created_at`.
 
-Ограничение:
-- уникальный индекс по `order_id`.
-
-Пока статус `assigned`, этой записи нет: отказ цены возвращает в `in_negotiation` без назначения.
+Появляется при «подтвердить условия». Удаляется/помечается снятым, если заказ вернулся в `published` (неоплата, и т.п.) — на `in_progress` назначение уже не снимается поиском.
 
 ### `order_status_events`
 
-История переходов состояний заказа.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id);
-- `from_status`;
-- `to_status`;
-- `actor_user_id` (nullable);
-- `reason_code` (nullable);
-- `payload_json` (nullable);
-- `created_at`.
+- `id`, `order_id`, `from_status`, `to_status`, `event_type`, `actor_user_id` (nullable), `payload_json`, `created_at`.
 
 ### `contact_exchange_events`
 
-Фиксация обмена контактами после первого «принять», до переговоров.
+- `id`, `order_id`, `created_at` — фиксация, что контакты открыты (первое «принять»).
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id);
-- `client_user_id` (FK -> users.id);
-- `executor_user_id` (FK -> users.id);
-- `created_at`.
+### `disputes`
 
-Канал обмена отдельным полем не задан: в карточке после принятия показываются `users.contact_phone` и `users.messengers_json` обеих сторон.
+Одна запись на заказ (`order_id` unique).
 
-### `support_threads`
-
-Тред спора. На заказ не больше двух: первый спор и одна апелляция. Одновременно открыт только один.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id);
-- `opened_by_user_id` (FK -> users.id, nullable если спор открыл провайдер/`expires_at`);
-- `is_appeal` (bool);
-- `parent_thread_id` (nullable, FK -> support_threads.id);
-- `reason_code` (nullable: код причины открытия; у апелляции может быть текст без кода справочника);
-- `reason_text` (nullable, обязателен при `other` и у апелляции);
+- `opened_by_user_id` (nullable, если открыл провайдер);
+- `reason_code`, `reason_text`;
 - `status` (`open`, `closed`);
-- `closed_to_status` (nullable: `completed` | `cancelled` | `in_progress`);
-- `closed_by_admin` (nullable);
+- `appeal_used` (bool);
+- `closed_to_status`, `closed_by_admin`;
 - `created_at`, `updated_at`.
 
-Создаётся кнопкой спора, непринятием работы, возвратом холда провайдером или апелляцией после закрытия админом. Закрывается только из админки. На этот заказ нельзя вернуть поиск исполнителей.
+Апелляция: та же строка снова `open`, `appeal_used = true`, сообщения продолжаются. Второго спора-строки нет.
 
-Фото к причине не хранятся. Фото — вложения сообщений.
+### `dispute_messages` / `dispute_message_photos`
 
-### `support_messages`
+Сообщения спора (`author_kind`: client | executor | admin) и фото к сообщению.
 
-Сообщения треда. Из **приложения** пишут клиент и исполнитель. Админ пишет только из **админки**.
+### `reviews`
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `thread_id` (FK -> support_threads.id);
-- `author_kind` (`client`, `executor`, `admin`);
-- `author_user_id` (FK -> users.id, nullable для админа, если персонал не в `users`);
-- `body` (текст);
-- `created_at`.
+После `completed`, по одному отзыву каждой стороны.
 
-В поле сообщения можно прикрепить фото (файлы).
-
-### `support_message_photos`
-
-Вложения к сообщению треда.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `message_id` (FK -> support_messages.id);
-- `url`;
-- `sort_order`;
-- `created_at`.
-
-Вход админа в консоль поддержки — часть MVP (не мобильное приложение).
+- `order_id`, `from_user_id`, `to_user_id`, `author_role` (`client` | `executor`);
+- `stars` (1–5), `body` (nullable);
+- unique `(order_id, from_user_id)`.
 
 ### `notifications`
 
-Лента уведомлений пользователя (клиент и исполнитель). Экран «все уведомления».
+- `id`, `user_id`, `type`, `payload_json`, `read_at` (nullable), `created_at`.
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `user_id` (FK -> users.id);
-- `order_id` (FK -> orders.id, nullable);
-- `type` (строка события: запрос, отказ, таймаут, цена, оплата, сдача, спор, отмена, …);
-- `payload_json` (nullable);
-- `read_at` (nullable);
-- `created_at`.
-
-### `order_completion_reviews`
-
-Действие клиента после того, как исполнитель перевёл заказ в `completed`.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id, unique);
-- `client_user_id` (FK -> users.id);
-- `decision` (`confirmed`, `declined`);
-- `source` (`client` | `auto_timeout`);
-- `created_at`.
-
-При `declined`: переход в `disputed`, тред, причина и при `other` текст. Фото — в сообщениях треда. После `completed` отменить заказ нельзя. При автоприёмке (`auto_timeout`) — как `confirmed`, минус рейтингу клиента.
+Прочтение не меняет статус кандидата.
 
 ### `rating_events`
 
-Журнал внутренних баллов. Правила дельт — `RATING_PLAN.md`. Таймаут 5 минут: `event_type = timeout`, `reason_code = response_timeout`, `delta = -2` исполнителю. Автоприёмка: `late_confirm`, клиенту **−3**. Автоотмена неоплаты: `payment_timeout`, клиенту **−3**.
+Правила — `RATING_PLAN.md`.
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `user_id` (FK -> users.id);
-- `role` (`client`, `executor`);
-- `order_id` (FK -> orders.id, nullable);
-- `event_type` (`success`, `penalty`, `timeout`, `late_confirm`, `payment_timeout`, `admin_adjust`);
-- `reason_code` (nullable);
-- `stage` (nullable, статус заказа в момент события);
-- `delta` (int);
-- `status` (`applied`, `pending_admin`);
-- `created_at`.
+- `id`, `user_id`, `role` (`client` | `executor`), `event_type`, `delta`, `order_id` (nullable), `created_at`.
 
-Для `other` сначала `pending_admin` и `delta = 0`.
+### `payment_records` / `payment_webhook_events`
 
-### `payment_records`
+- `payment_records`: `order_id`, `provider_code`, `provider_payment_id`, `payment_status`, сумма = `computed_amount`, `created_at`, `updated_at`.
+- `payment_webhook_events`: `provider_event_id` unique, сырое тело, обработан.
 
-Техническая запись интеграции с провайдером платежей (не кошелек).
+Холд только после создания платежа на `awaiting_payment`. Клиент сумму не задаёт.
 
-Ключевые поля:
-- `id` (UUID, PK);
-- `order_id` (FK -> orders.id);
-- `provider_code` (например, `yookassa`);
-- `provider_payment_id` (уникальный в провайдере);
-- `payment_status` (`not_required`, `pending`, `authorized`, `captured`, `failed`, `cancelled`, `refunded`);
-- `amount`;
-- `currency` (`RUB`);
-- `commission_amount` (nullable);
-- `raw_payload_json` (JSONB);
-- `created_at`, `updated_at`.
+### `subscription_payments` (когда флаг подписки включён)
 
-### `payment_webhook_events`
+Платёж активации исполнителя, не холд заказа. Webhook → `subscription_status = active`.
 
-Журнал входящих вебхуков провайдера.
-
-Ключевые поля:
-- `id` (UUID, PK);
-- `provider_code`;
-- `provider_event_id` (уникальный);
-- `provider_payment_id`;
-- `event_type`;
-- `payload_json` (JSONB);
-- `processed_at` (nullable);
-- `created_at`.
-
-## 3) ERD (Mermaid)
+## 3) ERD
 
 ```mermaid
 erDiagram
     users ||--o| executor_profiles : has
     executor_profiles ||--o{ machinery_units : owns
+    executor_profiles ||--o{ executor_licenses : licenses
     machinery_categories ||--o{ machinery_units : categorizes
+    machinery_categories ||--o{ executor_licenses : requires
     machinery_categories ||--o{ category_pricing_types : allows
     pricing_types ||--o{ category_pricing_types : allowed_in
     pricing_types ||--o{ machinery_pricing_rules : used_by
     machinery_units ||--o{ machinery_photos : has
     machinery_units ||--o{ machinery_pricing_rules : priced_by
+    executor_licenses ||--o{ executor_license_files : docs
 
     users ||--o{ orders : creates
     machinery_categories ||--o{ orders : requested_category
@@ -367,66 +222,61 @@ erDiagram
     orders ||--o| order_assignments : assigned_to_one
     orders ||--o{ order_status_events : tracks
     orders ||--o{ contact_exchange_events : contact_shared
-    orders ||--o{ support_threads : disputes
-    support_threads ||--o{ support_messages : has
-    support_messages ||--o{ support_message_photos : photos
-    orders ||--o| order_completion_reviews : client_reviews_completion
+    orders ||--o| disputes : one_dispute
+    disputes ||--o{ dispute_messages : has
+    dispute_messages ||--o{ dispute_message_photos : photos
+    orders ||--o{ reviews : public_stars
     orders ||--o| payment_records : payment_link
     users ||--o{ notifications : inbox
-
-    orders ||--o{ rating_events : rating_from
     users ||--o{ rating_events : score_changes
-    users ||--o{ order_candidates : receives
-    users ||--o{ order_assignments : executes
-    machinery_units ||--o{ order_candidates : candidate_unit
-    machinery_units ||--o{ order_assignments : assigned_unit
-
+    users ||--o{ reviews : writes
     payment_records ||--o{ payment_webhook_events : updated_by
 ```
 
-## 4) Ключевые инварианты домена
+## 4) Инварианты
 
-- Один пользователь может одновременно быть клиентом и исполнителем.
-- У одного `executor_profile` неограниченное число `machinery_units`.
-- Тарифы принадлежат единице транспорта и должны быть разрешены её категории (`category_pricing_types`).
-- Контакты принадлежат пользователю; в поиске не показываются, открываются после первого принятия. Без `full_name` и `contact_phone` нельзя создать заказ и нельзя принять запрос.
-- В списке поиска — карточка каждой единицы транспорта; на карте одинаковые координаты группируются.
-- Исполнитель с `declined` / `negotiation_rejected` по заказу скрыт; после `expired` и `withdrawn` его можно запросить снова.
-- Отмена, срыв переговоров и несогласие с ценой пишут причину и двигают внутренние рейтинги.
-- Полная отмена кнопкой только до `in_progress`; причина на `orders` для фильтра в админке. После начала работы — только спор.
-- Таймаут 5 минут: исполнителю −2 в рейтинге.
-- Срок ответа клиента на сдачу: 1 сутки, иначе автоприёмка.
-- Срок оплаты безопасной сделки: 1 сутки на `awaiting_payment`, иначе автоотмена.
-- Не больше двух тредов спора на заказ (спор + апелляция). Одновременно открыт один.
-- Свою технику заказать нельзя.
-- Админка (тред и закрытие спора) входит в MVP; из приложения админ не действует.
-- Для реальных денег источником истины остается платежный провайдер.
-- В `direct_payment` поле `payment_records` может отсутствовать.
-- В `secure_deal` должен существовать `payment_record` и обрабатываться вебхуки провайдера.
+- Один аккаунт — клиент и исполнитель; UI от `current_mode`.
+- Неограниченный парк; тарифы на единице.
+- Контакты скрыты до первого accept; минимум имя + один канал.
+- Лицензия одна на категорию; без `approved` машины категории не в поиске.
+- Свою технику заказать нельзя. Заблокированный не ищет и не принимает.
+- Цена заказа = ставка × количество, не ручной ввод.
+- У `urgent` нет дат; у `planned` только дата начала.
+- Один ожидающий кандидат. Пока не `in_progress`, срыв матча возвращает заказ в поиск. После `in_progress` поиск на этом заказе нельзя.
+- Не ответил за 5 минут = отказ (скрыт, повторно нельзя).
+- Занятый слот единицы не в выдаче; `published` слот не занимает.
+- Один `disputes` на заказ. Отмена `in_progress` только через спор.
+- Деньги: источник истины — провайдер. Нет платежа — нет возврата холда провайдером. После `captured` админ деньги не двигает.
 
-## 5) Индексы и ограничения (минимум)
+## 5) Индексы и ограничения
 
-- `users.phone` — уникальный.
-- `executor_profiles.user_id` — уникальный.
-- `machinery_categories.code` — уникальный.
-- `pricing_types.code` — PK.
-- `category_pricing_types(category_id, pricing_type_code)` — PK.
-- `machinery_pricing_rules(machinery_unit_id, pricing_type)` — уникальный среди активных правил.
-- `order_candidates`: не более одного `notified`/`viewed` на `order_id`; запрет нового запроса при существующем `declined` или `negotiation_rejected` для пары заказ–исполнитель.
-- `support_threads`: не больше одного `open` на `order_id`; не больше одной апелляции на заказ;
-- `payment_webhook_events.provider_event_id` — уникальный (идемпотентность вебхуков).
-- `payment_records(provider_code, provider_payment_id)` — уникальный.
+Обязательные:
+- `users.phone` unique;
+- `executor_profiles.user_id` unique;
+- `machinery_categories.code` unique;
+- `category_pricing_types(category_id, pricing_type_code)` PK;
+- `machinery_pricing_rules(machinery_unit_id, pricing_type)` unique среди активных;
+- `executor_licenses(executor_profile_id, category_id)` unique;
+- `order_candidates`: не более одного `notified` на заказ; запрет нового запроса при `declined` / `expired` / `negotiation_rejected` / `terms_expired`;
+- `disputes.order_id` unique;
+- `reviews(order_id, from_user_id)` unique;
+- `payment_webhook_events.provider_event_id` unique;
+- `payment_records(provider_code, provider_payment_id)` unique.
 
-Рекомендуемые индексы:
-- `machinery_units(executor_profile_id)`;
-- `executor_profiles(accepts_orders)`;
-- `order_candidates(response_deadline_at)` — обработка таймаута 5 минут;
-- `orders(cancel_reason_code)`, `orders(cancelled_by_role)` — фильтр в админке;
+Рекомендуемые:
+- `orders(status)`, `orders(client_user_id, status)`;
+- `orders(occupancy_start_at, occupancy_end_at)` для проверки занятости;
+- `machinery_units(executor_profile_id)`, `machinery_units(location_lat, location_lng)` (позже PostGIS);
+- `executor_profiles(accepts_orders, subscription_status)`;
+- `order_candidates(response_deadline_at)`, `orders(terms_confirm_deadline_at)`, `orders(execution_confirm_deadline_at)`;
+- `orders(cancel_reason_code)`, `orders(cancelled_by_role)`;
 - `orders(repeated_from_order_id)`;
-- `notifications(user_id, created_at)`.
+- `notifications(user_id, created_at)`;
+- `reviews(to_user_id)`;
+- `executor_licenses(status)` для очереди админки.
 
-## 6) Что можно отложить
+## 6) Отложить
 
-- Детальный календарь доступности с повторяющимися графиками.
-- Показ рейтинга в UI (формула на бэкенде уже в `RATING_PLAN.md`).
-- Корпоративный контур (`Company*`) до подтвержденного спроса.
+- Повторяющийся календарь слотов исполнителя (занятость в MVP = пересечение заказов после принятия).
+- Показ внутреннего рейтинга в UI.
+- `Company*`.

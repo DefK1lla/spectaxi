@@ -5,7 +5,7 @@
 - Базовый префикс: `/api/v1`.
 - Формат: `application/json`.
 - Аутентификация: `Bearer JWT`.
-- Время в формате ISO-8601 UTC.
+- Время в формате ISO-8601 UTC. Дата планового старта — `YYYY-MM-DD`.
 - Все операции изменения заказа должны быть идемпотентны там, где возможны повторы (`Idempotency-Key`).
 
 Пример единого формата ошибки:
@@ -52,58 +52,57 @@
 }
 ```
 
-Ответ `200`:
-```json
-{
-  "access_token": "jwt...",
-  "refresh_token": "jwt...",
-  "user": {
-    "id": "uuid",
-    "phone": "+79991234567",
-    "full_name": "Иван Петров",
-    "is_client_enabled": true,
-    "is_executor_enabled": false
-  }
-}
-```
+Ответ `200` включает `needs_registration: true`, если нет `full_name` / `current_mode`.
+
+### `POST /auth/complete-registration`
+
+Имя и режим: `client` | `executor`. Пишется в `current_mode`. При `executor` создаётся `executor_profile`.
 
 ### `GET /users/me`
 
-Текущий профиль, включая `full_name`, `contact_phone` и мессенджеры. Для создания и принятия заказа обязательны имя и телефон для связи.
+Профиль, режим, контакты. Для заказа нужны имя и хотя бы один канал: `contact_phone` | `telegram_url` | `whatsapp_url` | `max_url` | доп. мессенджер.
 
 ```json
 {
   "full_name": "Иван Петров",
+  "current_mode": "client",
   "contact_phone": "+79991234567",
-  "messengers": [
-    { "name": "Telegram", "url": "https://t.me/ivan" }
-  ]
+  "telegram_url": "https://t.me/ivan",
+  "whatsapp_url": null,
+  "max_url": null,
+  "messengers": []
 }
 ```
 
-Кнопка «добавить мессенджер» на клиенте добавляет ещё один объект `{ name, url }`. Название и ссылка — свободные строки.
+Поля Telegram / WhatsApp / MAX на форме всегда. Доп. мессенджеры — кнопка «добавить».
 
 ### `PATCH /users/me`
 
-Обновление профиля, телефона для связи и массива `messengers`.
+Профиль, `current_mode`, контакты.
+
+### `PATCH /users/me/mode`
+
+Переключение `current_mode`. При первом переходе в `executor` создаётся `executor_profile`.
 
 ## 3) Категории, настройки, парк и тарифы исполнителя
 
-Исполнитель сам добавляет транспорт и тарифы на каждую единицу. Лимита на число единиц нет. Видимость в поиске задаёт `accepts_orders`, не статус единицы техники.
+Исполнитель сам добавляет транспорт. В поиске: `accepts_orders`, лицензия категории `approved` (если у типа `license_category` не пустой), при включённом флаге — активная подписка.
 
 ### `GET /categories`
 
-Список типов транспорта.
+Каждый элемент — строка типа транспорта: системный `code`, текст для UI, категория прав, разрешённые тарифы. JSON-конфига лицензий нет.
 
-Ответ `200`:
 ```json
 {
-  "items": [
-    { "id": "uuid", "code": "tow_truck", "name": "Эвакуатор", "pricing_types": ["hour", "shift", "day", "month", "trip", "km"] },
-    { "id": "uuid", "code": "crane", "name": "Кран", "pricing_types": ["hour", "shift", "day", "month"] }
-  ]
+  "id": "uuid",
+  "code": "tow_truck",
+  "name_ru": "Эвакуатор",
+  "license_category": "B",
+  "pricing_types": ["hour", "shift", "day", "month", "trip", "km"]
 }
 ```
+
+`license_category: null` — лицензия для типа не нужна.
 
 ### `POST /executor/profile`
 
@@ -127,7 +126,11 @@
 }
 ```
 
-При `accepts_orders: false` исполнитель не показывается в поиске и не получает новые запросы.
+При `accepts_orders: false` исполнитель не в поиске. Если `executor_subscription_enabled` и подписка не `active` — тоже не в поиске (`409 SUBSCRIPTION_REQUIRED` на попытку включить приём без оплаты).
+
+### `POST /executor/subscription/pay`
+
+Только при включённом флаге. Создаёт платёж подписки; webhook активирует профиль.
 
 ### `GET /executor/machinery`
 
@@ -139,17 +142,24 @@
 
 Поля формы: `category_id`, `address_text`, `location_lat`, `location_lng`, `pricing_rules` (JSON-строка), файлы фото.
 
-Ответ `201`:
-```json
-{
-  "id": "uuid"
-}
-```
-
 Ошибки:
 - `400 VALIDATION_ERROR` — нет типа, нет тарифов, `base_rate <= 0`, неизвестный `pricing_type`;
 - `400 PRICING_TYPE_NOT_ALLOWED_FOR_CATEGORY` — тариф не разрешён типу транспорта;
-- `403 EXECUTOR_PROFILE_REQUIRED` — роль исполнителя не включена.
+- `403 EXECUTOR_PROFILE_REQUIRED` — нет профиля исполнителя.
+
+Ответ `201` включает `visible_in_search: false`, если лицензия категории ещё не `approved`.
+
+### `POST /executor/licenses`
+
+Документы лицензии на **категорию** (`category_id` + файлы). Статус `pending`, пока админ не подтвердит. Повторная подача по той же категории заменяет pending.
+
+### `GET /executor/licenses`
+
+Список лицензий текущего исполнителя.
+
+### `POST /admin/licenses/{licenseId}/review`
+
+Админ: `{ "decision": "approved" | "rejected", "comment": null }`.
 
 ### `GET /executor/machinery/{machineryId}`
 
@@ -163,22 +173,22 @@
 
 Мягкое удаление: `deleted_at` заполняется, единица исчезает из поиска и из выдачи списка.
 
-Если единица связана с заказом в `in_negotiation` / `assigned` / `awaiting_payment` / `in_progress` / `disputed` — `409 MACHINERY_IN_ACTIVE_ORDER`.
+Если единица связана с заказом в `in_negotiation` / `awaiting_payment` / `in_progress` / `disputed` — `409 MACHINERY_IN_ACTIVE_ORDER`.
 
 ## 4) Поиск
 
-Элемент выдачи — **единица транспорта**, не карточка исполнителя как целого. Контакты в выдаче не отдаются.
+Элемент выдачи — **единица транспорта**, не карточка исполнителя как целого. Контакты в выдаче не отдаются. Занятые на окно запроса единицы не возвращаются.
 
 ### `GET /search/machinery`
 
-Параметры:
-- `category_id` (обязательный);
+Параметры фильтра заказа — `SEARCH_ALGORITHM.md`:
+- `category_id`, `pricing_type`, `quantity`, `search_mode` (обязательные);
+- `planned_start_on` (обязателен при `search_mode=planned`, запрещён при `urgent`);
 - `lat`, `lng` (обязательные);
-- `search_mode` (`urgent` | `planned`);
-- `planned_start_at` (для `planned`);
-- `duration_minutes` (опционально);
-- `radius_km` (опционально);
-- `exclude_for_order_id` (опционально) — скрыть исполнителей с `declined` / `negotiation_rejected` по заказу.
+- `max_amount`, `radius_km` (опциональные фильтры);
+- `exclude_for_order_id` (опционально).
+
+Сортировка: расстояние, при равенстве цена. Контактов нет. В карточке — ставка выбранного тарифа и `computed_amount`.
 
 Список: плоский массив карточек машин. Карта группирует элементы с одинаковыми координатами: на точке число `+N`, по клику — список машин этой точки (снизу).
 
@@ -194,10 +204,11 @@
       "location_lat": 55.618,
       "location_lng": 37.688,
       "distance_km": 3.2,
-      "pricing_rules": [
-        { "pricing_type": "hour", "from_amount": 3500, "currency": "RUB" },
-        { "pricing_type": "shift", "from_amount": 25000, "currency": "RUB" }
-      ],
+      "pricing_type": "hour",
+      "unit_rate": 3500,
+      "quantity": 8,
+      "computed_amount": 28000,
+      "currency": "RUB",
       "executor": {
         "user_id": "uuid",
         "full_name": "Иван Петров",
@@ -220,28 +231,19 @@
 
 ### `POST /orders`
 
-Создание заказа и отправка запроса **одному** исполнителю. Статус сразу `published`. Черновик в API не создаётся.
+`save_as_draft: true` → статус `draft`, без кандидата. Иначе сразу `published` и запрос одному исполнителю.
 
-Запрос:
-```json
-{
-  "executor_user_id": "uuid",
-  "machinery_unit_id": "uuid",
-  "category_id": "uuid",
-  "search_mode": "urgent",
-  "settlement_mode": "direct_payment",
-  "address_text": "Москва, Ленинский проспект, 10",
-  "location_lat": 55.6761,
-  "location_lng": 37.5667,
-  "planned_start_at": null,
-  "planned_duration_minutes": null,
-  "description": "Нужен эвакуатор для легкового авто"
-}
-```
+В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_on` (если planned), точка, `settlement_mode`. Дат окончания нет. Сервер пишет `unit_rate`, `computed_amount`, `occupancy_start_at`, `occupancy_end_at`.
 
-`executor_user_id` и `machinery_unit_id` обязательны. Нельзя отправить запрос своей единице (`409 CANNOT_ORDER_OWN_MACHINERY`). Нельзя отправить запрос исполнителю с `declined` / `negotiation_rejected` по этому заказу. После `expired` и `withdrawn` — можно.
+`409 PROFILE_INCOMPLETE` — нет имени или ни одного канала связи. `409 CANNOT_ORDER_OWN_MACHINERY`. `409 LICENSE_NOT_APPROVED` — машина не должна была попасть в поиск.
 
-Если у клиента нет `full_name` или `contact_phone` — `409 PROFILE_INCOMPLETE` (предупреждение и ссылка в профиль).
+### `PATCH /orders/{orderId}`
+
+Черновик — любые поля фильтра. `in_negotiation` или `awaiting_payment` — правка деталей: `details_version++`, дедлайн подтверждения условий заново. Если был `awaiting_payment` — отменить/вернуть платёж, статус `in_negotiation`, уведомление исполнителю.
+
+### `POST /orders/{orderId}/publish`
+
+Черновик → `published` + запрос исполнителю.
 
 Ответ `201`:
 ```json
@@ -259,9 +261,9 @@
 
 ### `POST /orders/{orderId}/request-executor`
 
-Отправка запроса следующему исполнителю. Только `published`, нет кандидата в `notified` / `viewed`. Нельзя свою технику (`409 CANNOT_ORDER_OWN_MACHINERY`). Если нет `full_name` или `contact_phone` — `409 PROFILE_INCOMPLETE`.
+Отправка запроса следующему исполнителю. Только `published`, нет кандидата в `notified`. Нельзя свою технику (`409 CANNOT_ORDER_OWN_MACHINERY`). `409 PROFILE_INCOMPLETE` — нет имени или ни одного канала связи.
 
-Запрещено, если по заказу у этого исполнителя уже есть `declined` или `negotiation_rejected`. После `expired` и `withdrawn` — разрешено.
+Запрещено, если по заказу у этого исполнителя уже есть `declined`, `expired`, `negotiation_rejected` или `terms_expired`. После `withdrawn` и `lost_to_other_order` — разрешено (поиск всё равно скроет занятую единицу).
 
 Запрос:
 ```json
@@ -271,56 +273,32 @@
 }
 ```
 
-### `POST /orders/{orderId}/submit-agreed-price`
+### `POST /orders/{orderId}/confirm-terms`
 
-Заказчик после переговоров указывает оговоренную цену и отправляет на подтверждение исполнителю.
+Исполнитель фиксирует текущие условия. Только `in_negotiation`, до `terms_confirm_deadline_at`. Тело: `{ "details_version": 2 }`. Несовпадение версии — `409 STALE_ORDER_DETAILS`.
 
-Только при `status=in_negotiation`.
-
-Запрос:
-```json
-{
-  "agreed_amount": 12000,
-  "currency": "RUB"
-}
-```
-
-Ответ `200`:
-```json
-{
-  "id": "uuid",
-  "status": "assigned"
-}
-```
+`direct_payment` → `in_progress` + assignment. `secure_deal` → `awaiting_payment` + `payment_deadline_at`.
 
 ### `GET /orders/{orderId}`
 
-Карточка заказа со статусом, текущим кандидатом, дедлайном, ценой и назначением.
+Карточка заказа со статусом, текущим кандидатом, дедлайнами, ценой и назначением. Открытие из уведомления статус не меняет.
 
-Если текущий пользователь — исполнитель, и он больше не актуальный кандидат (истёк таймер, отказ, выбран другой), ответ `409`:
-```json
-{
-  "error": {
-    "code": "ORDER_NO_LONGER_RELEVANT",
-    "message": "Заказ уже не актуален"
-  }
-}
-```
+Если исполнитель больше не актуальный кандидат, карточка всё равно отдаётся (можно прочитать, что отказал / не ответил / принял другой заказ). Действия `accept` / `decline` / `confirm-terms` на неактуальном кандидате — `409 ORDER_NO_LONGER_RELEVANT`.
 
 ### `GET /orders`
 
-История заказов текущего пользователя. По умолчанию без `cancelled`. Архив отменённых: `status=cancelled`.
+История заказов текущего пользователя. По умолчанию без `cancelled` и без `draft`. Архив отменённых: `status=cancelled`. Черновики: `status=draft`.
 
 Для исполнителя этот же список — входящие и активные (не только из пуша).
 
 Параметры:
 - `role=client|executor`;
-- `status` (опционально);
+- `status` (в т.ч. `draft` — вкладка черновиков);
 - `page`, `limit`.
 
 ### `POST /orders/{orderId}/repeat`
 
-Только для `cancelled` или для `completed` **после принятия** (клиент подтвердил или автоприёмка). Иначе `409 REPEAT_NOT_ALLOWED`. Создаёт новый заказ с копией полей, `repeated_from_order_id` = исходный, статус `published` без кандидата. Клиент попадает в поиск. На исходном заказе поиск исполнителей не возобновляется.
+Только для `cancelled` или для `completed` **после принятия** (обе стороны или автоподтверждение). Иначе `409 REPEAT_NOT_ALLOWED`. Создаёт новый заказ с копией полей, `repeated_from_order_id` = исходный, статус `published` без кандидата. Клиент попадает в поиск. На исходном заказе поиск исполнителей не возобновляется.
 
 Ответ `201`:
 ```json
@@ -339,7 +317,7 @@
 
 ### `POST /orders/{orderId}/reject-negotiation`
 
-Клиент или исполнитель отклоняет партнёра (`in_negotiation` или `assigned`). Нужна причина стадии. Кандидат → `negotiation_rejected`, заказ → `published`.
+Клиент или исполнитель отклоняет партнёра (`in_negotiation`). Нужна причина стадии. Кандидат → `negotiation_rejected`, заказ → `published`.
 
 Запрос:
 ```json
@@ -351,9 +329,9 @@
 
 ### `POST /orders/{orderId}/cancel`
 
-Отмена кнопкой только на `published` | `in_negotiation` | `assigned` | `awaiting_payment`. Иначе `409 CANCEL_NOT_ALLOWED`.
+Отмена кнопкой только на `draft` | `published` | `in_negotiation` | `awaiting_payment`. Иначе `409 CANCEL_NOT_ALLOWED`. На `in_progress` отмена только через спор.
 
-На `published` причина **не нужна**. На остальных — код стадии (`CANCELLATION_REASONS.md`).
+На `published` причина **не нужна**. На остальных — код стадии (`CANCELLATION_REASONS.md`). На `awaiting_payment` платёж/холд отменяется или возвращается, затем `cancelled`.
 
 Запрос:
 ```json
@@ -381,7 +359,7 @@
 
 ### `POST /orders/{orderId}/dispute/appeal`
 
-После того как админ закрыл спор. Новый тред, `is_appeal = true`, заказ снова `disputed`. Не больше одной апелляции на заказ.
+После того как админ закрыл спор. Та же запись `disputes` снова `open`, `appeal_used = true`. Не больше одной апелляции.
 
 Иначе `409 APPEAL_NOT_ALLOWED` или `409 APPEAL_LIMIT_REACHED`.
 
@@ -389,7 +367,7 @@
 
 ### `GET /orders/{orderId}/dispute`
 
-Треды заказа (первый спор и апелляция, если есть) и сообщения текущего открытого.
+Одна запись спора и её сообщения.
 
 ### `POST /orders/{orderId}/dispute/messages`
 
@@ -417,32 +395,25 @@
 Запрос:
 ```json
 {
-  "status": "cancelled"
+  "status": "cancelled",
+  "sanction_client_delta": null,
+  "sanction_executor_delta": null
 }
 ```
 
-`status`: только `completed` | `cancelled` | `in_progress`. Нельзя `published`. Деньги следуют решению: `completed` — выплата или оставить выплаченное; `cancelled` — возврат (в том числе уже выплаченного).
+`status`: только `completed` | `cancelled` | `in_progress`.
 
-### `POST /orders/{orderId}/complete`
+Деньги:
 
-Исполнитель переводит заказ `in_progress` → `completed`. Клиенту уведомление. Ставится `completion_review_deadline_at` = сейчас + 1 сутки. После этого отмена заказа недоступна. Если клиент не ответил до дедлайна — автоприёмка (`decision=confirmed`, `source=auto_timeout`), выплата, минус рейтингу клиента.
+- платёж `authorized` (холд, ещё не выплата) — админ может выплатить или вернуть;
+- платёж уже `captured` — денег не трогать, только статус и опциональные санкции (рейтинг / далее блокировка отдельным методом);
+- платежа не было — денег нет.
 
-### `POST /orders/{orderId}/complete-review`
+### `POST /orders/{orderId}/confirm-execution`
 
-Клиент после `completed`: подтвердить или отклонить. Затем уведомление исполнителю.
+Любая сторона на `in_progress`. Когда подтвердили оба — `completed` и выплата при сделке. Если подтвердил один — ставится `execution_confirm_deadline_at` = сейчас + 1 сутки; молчание второй стороны → автоподтверждение (`late_confirm` −3 молчавшему).
 
-При `confirmed` и `secure_deal` — выплата исполнителю.
-
-При `declined`: обязательны `reason_code` и при `other` — `reason_text`. Статус заказа → `disputed`, создаётся тред. Фото — в сообщениях треда.
-
-Запрос:
-```json
-{
-  "decision": "confirmed"
-}
-```
-
-`decision`: `confirmed` | `declined`. При `declined` поля причины как у `POST /orders/{orderId}/disputes`.
+Отзыв: `POST /orders/{orderId}/reviews` `{ "stars": 5, "body": null }` после `completed`, по одному от каждой стороны.
 
 ## 6) Отклик исполнителя
 
@@ -450,18 +421,23 @@
 
 ### `POST /orders/{orderId}/candidates/{candidateId}/accept`
 
-Первое принятие. Только `published`, только до `response_deadline_at`. Если нет `full_name` или `contact_phone` — `409 PROFILE_INCOMPLETE`.
+Первое принятие. Только `published`, до дедлайна. `409 PROFILE_INCOMPLETE`, если нет имени или ни одного канала. После успеха — контакты, статус `in_negotiation`, `terms_confirm_deadline_at` = сейчас + 1 сутки. Условия здесь не фиксируются.
+
+Если единица в этот момент уже занята пересекающимся заказом — `409 UNIT_OCCUPIED`, кандидат `lost_to_other_order`, заказ клиента остаётся `published`.
+
+Если принял успешно — другие `notified` кандидаты **этой единицы** с пересекающимся окном: `lost_to_other_order`, их заказы `published`, клиентам уведомление.
 
 Требования:
 - обязателен `Idempotency-Key`;
-- атомарно относительно истечения 5 минут.
+- атомарно относительно истечения 5 минут и относительно занятия слота.
 
 Ответ `200`:
 ```json
 {
   "result": "accepted",
   "order_id": "uuid",
-  "status": "in_negotiation"
+  "status": "in_negotiation",
+  "terms_confirm_deadline_at": "2026-09-08T11:20:00Z"
 }
 ```
 
@@ -469,6 +445,7 @@
 
 Ошибки:
 - `409 ORDER_NO_LONGER_RELEVANT` — дедлайн прошёл, уже отказ/истечение, заказ не в `published`;
+- `409 UNIT_OCCUPIED`;
 - `409 INVALID_STATE_TRANSITION`.
 
 ### `POST /orders/{orderId}/candidates/{candidateId}/decline`
@@ -483,27 +460,11 @@
 }
 ```
 
-### `POST /orders/{orderId}/confirm`
-
-Второе принятие или отказ после `assigned` (заказчик уже отправил оговоренную цену).
-
-Запрос:
-```json
-{
-  "action": "decline",
-  "reason_code": "price_disagreement",
-  "reason_text": null
-}
-```
-
-`action`: `accept` | `decline`. При `decline` причина обязательна.
-
-При `accept` — создаётся `order_assignment`. Дальше: `direct_payment` → `in_progress`; `secure_deal` → `awaiting_payment` (ставится `payment_deadline_at` = сейчас + 1 сутки). Если за сутки холд не успешен — автоотмена, минус клиенту.  
-При `decline` (несогласие с ценой) — `in_negotiation`, клиенту уведомление, нужна причина, событие рейтинга. Таймера нет.
+Фиксация условий — `POST /orders/{orderId}/confirm-terms`, не этот метод.
 
 ## 7) Контакты
 
-Обмен фиксируется при первом `accept`. Показываются контакты **обеих** сторон из профиля пользователя (`contact_phone`, `messengers`).
+Обмен фиксируется при первом `accept`. Показываются `contact_phone`, `telegram_url`, `whatsapp_url`, `max_url`, доп. `messengers`.
 
 ## 8) Безопасная сделка (опциональный контур)
 
@@ -511,13 +472,11 @@
 
 ### `POST /orders/{orderId}/secure-deal/create-payment`
 
-Создание платежа у провайдера. Только при `status=awaiting_payment` и `settlement_mode=secure_deal`. После успешного холда заказ → `in_progress`.
+Создание платежа у провайдера. Только `awaiting_payment` + `secure_deal`. Сумма = `order_pricing.computed_amount` (клиент сумму не передаёт). После холда `authorized` → `in_progress`.
 
 Запрос:
 ```json
 {
-  "amount": 25000,
-  "currency": "RUB",
   "return_url": "spectaxi://payment-return"
 }
 ```
@@ -546,7 +505,8 @@ Webhook от платежного провайдера.
 - идемпотентность по `provider_event_id`;
 - асинхронная обработка;
 - фиксация результата в `payment_webhook_events`.
-- если провайдер вернул холд по `expires_at` — заказ → `disputed`.
+
+- если провайдер вернул холд по `expires_at` и статус платежа был `authorized` — заказ → `disputed`. Неоплаченный заказ провайдер не трогает; наш таймаут возвращает заказ в `published`.
 
 ## 8.1) Уведомления
 
@@ -558,14 +518,14 @@ Webhook от платежного провайдера.
 
 ### `POST /notifications/{notificationId}/read`
 
-Пометить прочитанным.
+Пометить прочитанным. На статус кандидата не влияет.
 
 ## 9) Справочник статусов
 
 ### Заказ (`orders.status`)
+- `draft`
 - `published`
 - `in_negotiation`
-- `assigned`
 - `awaiting_payment`
 - `in_progress`
 - `completed`
@@ -574,12 +534,13 @@ Webhook от платежного провайдера.
 
 ### Кандидат (`order_candidates.candidate_status`)
 - `notified`
-- `viewed`
 - `accepted`
 - `declined`
 - `expired`
 - `withdrawn`
 - `negotiation_rejected`
+- `terms_expired`
+- `lost_to_other_order`
 
 ### Платеж (`payment_records.payment_status`)
 - `not_required`
@@ -592,6 +553,6 @@ Webhook от платежного провайдера.
 
 ## 10) Минимальные SLA для API MVP
 
-- Первое `accept` / истечение 5 минут: атомарность важнее гонки нескольких исполнителей (одновременно ждёт один).
+- Первое `accept` / истечение 5 минут / занятие слота: атомарность важнее гонки.
 - `GET /search/machinery`: p95 < 600 мс при базовой геовыборке.
 - При недоступности платежного провайдера основной сценарий `direct_payment` продолжает работать.
