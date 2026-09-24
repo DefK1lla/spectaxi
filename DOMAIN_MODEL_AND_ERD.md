@@ -72,7 +72,7 @@
 - `id`, `machinery_unit_id`, `url`, `sort_order`;
 - `created_at`.
 
-Файлы загружает исполнитель, в API с клиента URL не принимаются. У активной единицы минимум одно фото.
+Файлы загружает исполнитель, в API с клиента URL не принимаются. У активной единицы минимум одно фото; последнее удалить нельзя. Аватар исполнителя — тоже файлом.
 
 ### `machinery_pricing_rules`
 
@@ -107,7 +107,7 @@
 - `client_user_id`, `category_id`, `settlement_mode` (`direct_payment` | `secure_deal`);
 - `search_mode` (`urgent` | `planned`);
 - `planned_start_at` (timestamptz, nullable; обязательно при `planned`, пусто при `urgent`) — дата и время начала из календаря, для информации исполнителю; используется только для двух системных правил: автоотмена «исполнитель не найден» и окно отмены планового до начала;
-- `published_at` (nullable; обновляется при каждом входе в `published`) — точка отсчёта 24 часов для автоотмены срочного;
+- `search_activity_at` (nullable) — последняя активность в поиске: вход в `published`, отправка запроса исполнителю, правка заказа клиентом. Точка отсчёта 24 часов бездействия для автоотмены срочного;
 - `details_version` (int, default 1);
 - `address_text`, `location_lat`, `location_lng`, `description` (nullable);
 - `terms_confirm_deadline_at` (nullable; вход в `in_negotiation` + 1 сутки, сброс при правке деталей);
@@ -182,6 +182,8 @@
 - `stars` (1–5), `body` (nullable);
 - unique `(order_id, from_user_id)`.
 
+Отзывы об исполнителе видны в поиске и профиле. Отзывы о клиенте — исполнителю в карточке входящего запроса как средняя оценка и число отзывов (без текста и контактов).
+
 ### `notifications`
 
 - `id`, `user_id`, `type`, `payload_json`, `read_at` (nullable), `created_at`.
@@ -249,15 +251,15 @@ erDiagram
 - Лицензия одна на категорию; без `approved` машины категории не в поиске.
 - Свою технику заказать нельзя. Заблокированный не ищет и не принимает.
 - Цена заказа = ставка × количество, не ручной ввод.
-- Календаря занятости нет: у `urgent` нет даты; у `planned` дата и время начала только для информации.
+- Календаря занятости нет: у `urgent` нет даты; у `planned` дата и время начала на выдачу не влияют (используются только для автоотмены «не найден» и окна отмены до начала).
 - Срочный поиск показывает только `accepts_urgent_orders = true`; флаг меняет только исполнитель.
 - На один заказ один ожидающий кандидат; у одного исполнителя может быть несколько ожидающих запросов. Принял срочный — остальные срочные `auto_declined` (на уровне исполнителя, не машины).
 - Пока не `in_progress`, срыв матча возвращает заказ в поиск. После `in_progress` поиск на этом заказе нельзя.
 - Полную отмену до работы делает только клиент; исполнитель до работы только отклоняет партнёра. Плановый на `in_progress` до `planned_start_at` могут отменить обе стороны.
-- `published` без кандидата протухает: срочный 24 ч, плановый — дата начала.
+- `published` без кандидата протухает: срочный — 24 ч без активности клиента, плановый — дата начала.
 - Не ответил за 5 минут = отказ (скрыт, повторно нельзя).
 - Открытый спор отменяет таймер автоприёмки.
-- Один `disputes` на заказ. Отмена `in_progress` только через спор.
+- Один `disputes` на заказ. Отмена `in_progress` после начала работы — только через спор.
 - Деньги: источник истины — провайдер. Нет платежа — нет возврата холда провайдером. После `captured` админ деньги не двигает.
 
 ## 5) Индексы и ограничения
@@ -281,7 +283,7 @@ erDiagram
 - `executor_profiles(accepts_urgent_orders, subscription_status)`;
 - `order_candidates(executor_user_id, candidate_status)` — для автоотказа остальных срочных запросов при принятии;
 - `order_candidates(response_deadline_at)`, `orders(terms_confirm_deadline_at)`, `orders(payment_deadline_at)`, `orders(execution_confirm_deadline_at)`;
-- `orders(status, published_at)`, `orders(status, planned_start_at)` — джоба «исполнитель не найден»;
+- `orders(status, search_activity_at)`, `orders(status, planned_start_at)` — джоба «исполнитель не найден»;
 - `rating_events(status)` — очередь `pending_admin`;
 - `orders(cancel_reason_code)`, `orders(cancelled_by_role)`;
 - `orders(repeated_from_order_id)`;
