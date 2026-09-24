@@ -72,7 +72,7 @@
 - `id`, `machinery_unit_id`, `url`, `sort_order`;
 - `created_at`.
 
-Файлы загружает исполнитель, в API с клиента URL не принимаются.
+Файлы загружает исполнитель, в API с клиента URL не принимаются. У активной единицы минимум одно фото.
 
 ### `machinery_pricing_rules`
 
@@ -106,14 +106,15 @@
 - `status`: `draft`, `published`, `in_negotiation`, `awaiting_payment`, `in_progress`, `completed`, `disputed`, `cancelled`;
 - `client_user_id`, `category_id`, `settlement_mode` (`direct_payment` | `secure_deal`);
 - `search_mode` (`urgent` | `planned`);
-- `planned_start_at` (timestamptz, nullable; обязательно при `planned`, пусто при `urgent`) — дата и время начала из календаря, **только для информации** исполнителю; сервер по нему ничего не считает;
+- `planned_start_at` (timestamptz, nullable; обязательно при `planned`, пусто при `urgent`) — дата и время начала из календаря, для информации исполнителю; используется только для двух системных правил: автоотмена «исполнитель не найден» и окно отмены планового до начала;
+- `published_at` (nullable; обновляется при каждом входе в `published`) — точка отсчёта 24 часов для автоотмены срочного;
 - `details_version` (int, default 1);
-- `address_text`, `location_lat`, `location_lng`, `description`;
+- `address_text`, `location_lat`, `location_lng`, `description` (nullable);
 - `terms_confirm_deadline_at` (nullable; вход в `in_negotiation` + 1 сутки, сброс при правке деталей);
 - `payment_deadline_at` (nullable; «подтвердить условия» + 1 сутки при `secure_deal`);
 - `execution_confirmed_by_client_at`, `execution_confirmed_by_executor_at`;
 - `execution_confirm_deadline_at` (nullable) — внутренний таймер автоприёмки: время первого из двух подтверждений «работа выполнена» + 1 сутки;
-- `cancel_*`, `cancelled_by_user_id`, `cancelled_by_role` (`client` | `executor` | `system`);
+- `cancel_*`, `cancelled_by_user_id`, `cancelled_by_role` (`client` | `executor` | `system` | `admin`);
 - `repeated_from_order_id`;
 - `created_at`, `updated_at`.
 
@@ -123,7 +124,10 @@
 
 Один к заказу. Сумму считает сервер.
 
-- `pricing_type`, `quantity` (> 0), `unit_rate`, `computed_amount` (`unit_rate × quantity`), `currency`.
+- `pricing_type`, `quantity` (> 0), `unit_rate`, `computed_amount` (`unit_rate × quantity`), `currency`;
+- `priced_at` — момент фиксации.
+
+`unit_rate` копируется с машины при отправке запроса и при каждой правке заказчиком; смена ставок исполнителем на машине запись не меняет.
 
 ### `order_candidates`
 
@@ -188,7 +192,9 @@
 
 Правила — `RATING_PLAN.md`.
 
-- `id`, `user_id`, `role` (`client` | `executor`), `event_type`, `delta`, `order_id` (nullable), `created_at`.
+- `id`, `user_id`, `role` (`client` | `executor`), `event_type`, `delta`, `order_id` (nullable);
+- `status` (`applied` | `pending_admin`), `resolved_by_admin`, `resolved_at` (nullable) — для причины `other`;
+- `created_at`.
 
 ### `payment_records` / `payment_webhook_events`
 
@@ -245,9 +251,12 @@ erDiagram
 - Цена заказа = ставка × количество, не ручной ввод.
 - Календаря занятости нет: у `urgent` нет даты; у `planned` дата и время начала только для информации.
 - Срочный поиск показывает только `accepts_urgent_orders = true`; флаг меняет только исполнитель.
-- На один заказ один ожидающий кандидат; у одного исполнителя может быть несколько ожидающих запросов. Принял срочный — остальные срочные `auto_declined`.
+- На один заказ один ожидающий кандидат; у одного исполнителя может быть несколько ожидающих запросов. Принял срочный — остальные срочные `auto_declined` (на уровне исполнителя, не машины).
 - Пока не `in_progress`, срыв матча возвращает заказ в поиск. После `in_progress` поиск на этом заказе нельзя.
+- Полную отмену до работы делает только клиент; исполнитель до работы только отклоняет партнёра. Плановый на `in_progress` до `planned_start_at` могут отменить обе стороны.
+- `published` без кандидата протухает: срочный 24 ч, плановый — дата начала.
 - Не ответил за 5 минут = отказ (скрыт, повторно нельзя).
+- Открытый спор отменяет таймер автоприёмки.
 - Один `disputes` на заказ. Отмена `in_progress` только через спор.
 - Деньги: источник истины — провайдер. Нет платежа — нет возврата холда провайдером. После `captured` админ деньги не двигает.
 
@@ -271,7 +280,9 @@ erDiagram
 - `machinery_units(executor_profile_id)`, `machinery_units(location_lat, location_lng)` (позже PostGIS);
 - `executor_profiles(accepts_urgent_orders, subscription_status)`;
 - `order_candidates(executor_user_id, candidate_status)` — для автоотказа остальных срочных запросов при принятии;
-- `order_candidates(response_deadline_at)`, `orders(terms_confirm_deadline_at)`, `orders(execution_confirm_deadline_at)`;
+- `order_candidates(response_deadline_at)`, `orders(terms_confirm_deadline_at)`, `orders(payment_deadline_at)`, `orders(execution_confirm_deadline_at)`;
+- `orders(status, published_at)`, `orders(status, planned_start_at)` — джоба «исполнитель не найден»;
+- `rating_events(status)` — очередь `pending_admin`;
 - `orders(cancel_reason_code)`, `orders(cancelled_by_role)`;
 - `orders(repeated_from_order_id)`;
 - `notifications(user_id, created_at)`;
