@@ -5,7 +5,7 @@
 - Базовый префикс: `/api/v1`.
 - Формат: `application/json`.
 - Аутентификация: `Bearer JWT`.
-- Время в формате ISO-8601 UTC. Дата планового старта — `YYYY-MM-DD`.
+- Время в формате ISO-8601 UTC, в том числе `planned_start_at` (дата и время начала планового заказа).
 - Все операции изменения заказа должны быть идемпотентны там, где возможны повторы (`Idempotency-Key`).
 
 Пример единого формата ошибки:
@@ -86,7 +86,7 @@
 
 ## 3) Категории, настройки, парк и тарифы исполнителя
 
-Исполнитель сам добавляет транспорт. В поиске: `accepts_orders`, лицензия категории `approved` (если у типа `license_category` не пустой), при включённом флаге — активная подписка.
+Исполнитель сам добавляет транспорт. В поиске: лицензия категории `approved` (если у типа `license_category` не пустой), при включённом флаге — активная подписка, для срочных заказов — `accepts_urgent_orders`.
 
 ### `GET /categories`
 
@@ -113,20 +113,22 @@
 Ответ `200`:
 ```json
 {
-  "accepts_orders": false
+  "accepts_urgent_orders": false
 }
 ```
 
 ### `PATCH /executor/settings`
 
+Чекбокс «принимаю срочные заказы» на экране профиля. Меняет только исполнитель; сервер сам его не переключает.
+
 Запрос:
 ```json
 {
-  "accepts_orders": true
+  "accepts_urgent_orders": true
 }
 ```
 
-При `accepts_orders: false` исполнитель не в поиске. Если `executor_subscription_enabled` и подписка не `active` — тоже не в поиске (`409 SUBSCRIPTION_REQUIRED` на попытку включить приём без оплаты).
+При `false` исполнитель не попадает в выдачу по **срочным** заказам; по плановым виден. Если `executor_subscription_enabled` и подписка не `active` — не в поиске вообще (`409 SUBSCRIPTION_REQUIRED` на попытку включить флаг без оплаты).
 
 ### `POST /executor/subscription/pay`
 
@@ -177,18 +179,18 @@
 
 ## 4) Поиск
 
-Элемент выдачи — **единица транспорта**, не карточка исполнителя как целого. Контакты в выдаче не отдаются. Занятые на окно запроса единицы не возвращаются.
+Элемент выдачи — **единица транспорта**, не карточка исполнителя как целого. Контакты в выдаче не отдаются. Занятость по времени не проверяется.
 
 ### `GET /search/machinery`
 
 Параметры фильтра заказа — `SEARCH_ALGORITHM.md`:
 - `category_id`, `pricing_type`, `quantity`, `search_mode` (обязательные);
-- `planned_start_on` (обязателен при `search_mode=planned`, запрещён при `urgent`);
+- `planned_start_at` (обязателен при `search_mode=planned`, запрещён при `urgent`; на выдачу не влияет, копируется в заказ);
 - `lat`, `lng` (обязательные);
 - `max_amount`, `radius_km` (опциональные фильтры);
 - `exclude_for_order_id` (опционально).
 
-Сортировка: расстояние, при равенстве цена. Контактов нет. В карточке — ставка выбранного тарифа и `computed_amount`.
+При `search_mode=urgent` отдаются только исполнители с `accepts_urgent_orders = true`. Сортировка: расстояние, при равенстве цена. Контактов нет. В карточке — ставка выбранного тарифа и `computed_amount`.
 
 Список: плоский массив карточек машин. Карта группирует элементы с одинаковыми координатами: на точке число `+N`, по клику — список машин этой точки (снизу).
 
@@ -233,9 +235,9 @@
 
 `save_as_draft: true` → статус `draft`, без кандидата. Иначе сразу `published` и запрос одному исполнителю.
 
-В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_on` (если planned), точка, `settlement_mode`. Дат окончания нет. Сервер пишет `unit_rate`, `computed_amount`, `occupancy_start_at`, `occupancy_end_at`.
+В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_at` (если planned), точка, `settlement_mode`. Даты окончания нет. Сервер пишет `unit_rate` и `computed_amount`.
 
-`409 PROFILE_INCOMPLETE` — нет имени или ни одного канала связи. `409 CANNOT_ORDER_OWN_MACHINERY`. `409 LICENSE_NOT_APPROVED` — машина не должна была попасть в поиск.
+`409 PROFILE_INCOMPLETE` — нет имени или ни одного канала связи. `409 CANNOT_ORDER_OWN_MACHINERY`. `409 LICENSE_NOT_APPROVED` — машина не должна была попасть в поиск. `409 EXECUTOR_NOT_ACCEPTING_URGENT` — срочный запрос исполнителю с выключенным флагом (не должен был попасть в выдачу).
 
 ### `PATCH /orders/{orderId}`
 
@@ -263,7 +265,7 @@
 
 Отправка запроса следующему исполнителю. Только `published`, нет кандидата в `notified`. Нельзя свою технику (`409 CANNOT_ORDER_OWN_MACHINERY`). `409 PROFILE_INCOMPLETE` — нет имени или ни одного канала связи.
 
-Запрещено, если по заказу у этого исполнителя уже есть `declined`, `expired`, `negotiation_rejected` или `terms_expired`. После `withdrawn` и `lost_to_other_order` — разрешено (поиск всё равно скроет занятую единицу).
+Запрещено, если по заказу у этого исполнителя уже есть `declined`, `auto_declined`, `expired`, `negotiation_rejected` или `terms_expired`. После `withdrawn` — разрешено.
 
 Запрос:
 ```json
@@ -423,13 +425,11 @@
 
 Первое принятие. Только `published`, до дедлайна. `409 PROFILE_INCOMPLETE`, если нет имени или ни одного канала. После успеха — контакты, статус `in_negotiation`, `terms_confirm_deadline_at` = сейчас + 1 сутки. Условия здесь не фиксируются.
 
-Если единица в этот момент уже занята пересекающимся заказом — `409 UNIT_OCCUPIED`, кандидат `lost_to_other_order`, заказ клиента остаётся `published`.
-
-Если принял успешно — другие `notified` кандидаты **этой единицы** с пересекающимся окном: `lost_to_other_order`, их заказы `published`, клиентам уведомление.
+Если принятый заказ **срочный** — все остальные `notified` кандидаты **этого исполнителя** по другим **срочным** заказам → `auto_declined`; их заказы остаются `published`; клиентам уведомление «исполнитель отказался». Кандидаты по плановым заказам не трогаются. Если принятый заказ плановый — ничего не закрывается. Флаг `accepts_urgent_orders` не меняется.
 
 Требования:
 - обязателен `Idempotency-Key`;
-- атомарно относительно истечения 5 минут и относительно занятия слота.
+- атомарно относительно истечения 5 минут.
 
 Ответ `200`:
 ```json
@@ -444,8 +444,7 @@
 После успеха фиксируется обмен контактами. Цена заказа здесь не выставляется.
 
 Ошибки:
-- `409 ORDER_NO_LONGER_RELEVANT` — дедлайн прошёл, уже отказ/истечение, заказ не в `published`;
-- `409 UNIT_OCCUPIED`;
+- `409 ORDER_NO_LONGER_RELEVANT` — дедлайн прошёл, уже отказ/автоотказ/истечение, заказ не в `published`;
 - `409 INVALID_STATE_TRANSITION`.
 
 ### `POST /orders/{orderId}/candidates/{candidateId}/decline`
@@ -536,11 +535,11 @@ Webhook от платежного провайдера.
 - `notified`
 - `accepted`
 - `declined`
+- `auto_declined`
 - `expired`
 - `withdrawn`
 - `negotiation_rejected`
 - `terms_expired`
-- `lost_to_other_order`
 
 ### Платеж (`payment_records.payment_status`)
 - `not_required`
@@ -553,6 +552,6 @@ Webhook от платежного провайдера.
 
 ## 10) Минимальные SLA для API MVP
 
-- Первое `accept` / истечение 5 минут / занятие слота: атомарность важнее гонки.
+- Первое `accept` / истечение 5 минут / автоотказ остальных срочных: атомарность важнее гонки.
 - `GET /search/machinery`: p95 < 600 мс при базовой геовыборке.
 - При недоступности платежного провайдера основной сценарий `direct_payment` продолжает работать.

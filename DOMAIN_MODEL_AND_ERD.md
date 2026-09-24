@@ -2,7 +2,7 @@
 
 ## 1) Цель
 
-Минимальная модель MVP: без обязательной безопасной сделки, без внутреннего кошелька. Выровнена с `USER_SCENARIOS.md`.
+Минимальная модель MVP: без обязательной безопасной сделки, без внутреннего кошелька, без календаря занятости. Выровнена с `USER_SCENARIOS.md`.
 
 ## 2) Сущности
 
@@ -23,14 +23,17 @@
 
 ### `executor_profiles`
 
-- `user_id` unique, `accepts_orders`, `avatar_url`, `about`;
+- `user_id` unique, `avatar_url`, `about`;
+- `accepts_urgent_orders` (bool) — чекбокс «принимаю срочные заказы» на экране профиля; меняет только сам исполнитель;
 - `subscription_status` (`none`, `active`, `paused`, `expired`);
 - `subscription_expires_at` (nullable);
 - `created_at`, `updated_at`.
 
 Создаётся при регистрации в режиме исполнителя или при первом переключении на исполнителя.
 
-Пока `executor_subscription_enabled = false`, статус не ограничивает поиск.
+`accepts_urgent_orders = false` скрывает исполнителя только из выдачи по срочным заказам; по плановым он виден. Система этот флаг не переключает.
+
+Пока `executor_subscription_enabled = false`, статус подписки не ограничивает поиск.
 
 ### `machinery_categories`
 
@@ -62,7 +65,7 @@
 - `deleted_at` (nullable, мягкое удаление);
 - `created_at`, `updated_at`.
 
-Лимита единиц нет.
+Лимита единиц нет. Флага занятости на единице нет.
 
 ### `machinery_photos`
 
@@ -79,7 +82,7 @@
 
 Тариф принадлежит единице.
 
-В поиске единица участвует только если: не удалена, `accepts_orders`, подписка ок (если флаг), есть нужный тариф, лицензия категории `approved` либо `license_category` пустой, слот свободен.
+В поиске единица участвует только если: не удалена, подписка ок (если флаг), есть нужный тариф, лицензия категории `approved` либо `license_category` пустой, и для срочного поиска — `accepts_urgent_orders`.
 
 ### `executor_licenses`
 
@@ -103,19 +106,18 @@
 - `status`: `draft`, `published`, `in_negotiation`, `awaiting_payment`, `in_progress`, `completed`, `disputed`, `cancelled`;
 - `client_user_id`, `category_id`, `settlement_mode` (`direct_payment` | `secure_deal`);
 - `search_mode` (`urgent` | `planned`);
-- `planned_start_on` (date, nullable; обязательно при `planned`, пусто при `urgent`);
-- `occupancy_start_at`, `occupancy_end_at` (считает сервер из режима, даты и тарифа × количества — `SEARCH_ALGORITHM.md`);
+- `planned_start_at` (timestamptz, nullable; обязательно при `planned`, пусто при `urgent`) — дата и время начала из календаря, **только для информации** исполнителю; сервер по нему ничего не считает;
 - `details_version` (int, default 1);
 - `address_text`, `location_lat`, `location_lng`, `description`;
 - `terms_confirm_deadline_at` (nullable; вход в `in_negotiation` + 1 сутки, сброс при правке деталей);
 - `payment_deadline_at` (nullable; «подтвердить условия» + 1 сутки при `secure_deal`);
 - `execution_confirmed_by_client_at`, `execution_confirmed_by_executor_at`;
-- `execution_confirm_deadline_at` (nullable) — срок, за который **вторая** сторона должна нажать «работа выполнена»: время первого из двух подтверждений + 1 сутки. Это не дедлайн отзыва и не «проверка клиентом»;
+- `execution_confirm_deadline_at` (nullable) — внутренний таймер автоприёмки: время первого из двух подтверждений «работа выполнена» + 1 сутки;
 - `cancel_*`, `cancelled_by_user_id`, `cancelled_by_role` (`client` | `executor` | `system`);
 - `repeated_from_order_id`;
 - `created_at`, `updated_at`.
 
-Нет статуса `assigned`. Нет клиентских `work_start_at` / `work_end_at`.
+Нет статуса `assigned`. Нет окна работ, окончания и полей занятости.
 
 ### `order_pricing`
 
@@ -126,22 +128,22 @@
 ### `order_candidates`
 
 - `id`, `order_id`, `executor_user_id`, `machinery_unit_id`;
-- `candidate_status`: `notified`, `accepted`, `declined`, `expired`, `withdrawn`, `negotiation_rejected`, `terms_expired`, `lost_to_other_order`;
+- `candidate_status`: `notified`, `accepted`, `declined`, `auto_declined`, `expired`, `withdrawn`, `negotiation_rejected`, `terms_expired`;
 - `notified_at`, `response_deadline_at` (`notified_at` + 5 минут);
 - `accepted_at` (nullable);
 - `reject_reason_code`, `reject_reason_text` (nullable);
 - `created_at`, `updated_at`.
 
-Статуса `viewed` нет.
+Статуса `viewed` нет. `auto_declined` — система закрыла запрос, потому что исполнитель принял другой срочный заказ; для клиента это отказ, штрафа исполнителю нет.
 
-На заказ не более одного `notified`. Assignment при «подтвердить условия»; при возврате на поиск снимается.
+На заказ не более одного `notified`. Один исполнитель может одновременно быть `notified` по нескольким заказам. Assignment при «подтвердить условия»; при возврате на поиск снимается.
 
 ### `order_assignments`
 
 - `id`, `order_id` unique, `executor_user_id`, `machinery_unit_id`;
 - `created_at`.
 
-Появляется при «подтвердить условия». Удаляется/помечается снятым, если заказ вернулся в `published` (неоплата, и т.п.) — на `in_progress` назначение уже не снимается поиском.
+Появляется при «подтвердить условия». Снимается, если заказ вернулся в `published` (неоплата и т.п.) — на `in_progress` назначение уже не снимается.
 
 ### `order_status_events`
 
@@ -236,15 +238,16 @@ erDiagram
 ## 4) Инварианты
 
 - Один аккаунт — клиент и исполнитель; UI от `current_mode`.
-- Неограниченный парк; тарифы на единице.
+- Неограниченный парк; тарифы на единице; набор тарифов задаёт тип транспорта.
 - Контакты скрыты до первого accept; минимум имя + один канал.
 - Лицензия одна на категорию; без `approved` машины категории не в поиске.
 - Свою технику заказать нельзя. Заблокированный не ищет и не принимает.
 - Цена заказа = ставка × количество, не ручной ввод.
-- У `urgent` нет дат; у `planned` только дата начала.
-- Один ожидающий кандидат. Пока не `in_progress`, срыв матча возвращает заказ в поиск. После `in_progress` поиск на этом заказе нельзя.
+- Календаря занятости нет: у `urgent` нет даты; у `planned` дата и время начала только для информации.
+- Срочный поиск показывает только `accepts_urgent_orders = true`; флаг меняет только исполнитель.
+- На один заказ один ожидающий кандидат; у одного исполнителя может быть несколько ожидающих запросов. Принял срочный — остальные срочные `auto_declined`.
+- Пока не `in_progress`, срыв матча возвращает заказ в поиск. После `in_progress` поиск на этом заказе нельзя.
 - Не ответил за 5 минут = отказ (скрыт, повторно нельзя).
-- Занятый слот единицы не в выдаче; `published` слот не занимает.
 - Один `disputes` на заказ. Отмена `in_progress` только через спор.
 - Деньги: источник истины — провайдер. Нет платежа — нет возврата холда провайдером. После `captured` админ деньги не двигает.
 
@@ -257,17 +260,17 @@ erDiagram
 - `category_pricing_types(category_id, pricing_type_code)` PK;
 - `machinery_pricing_rules(machinery_unit_id, pricing_type)` unique среди активных;
 - `executor_licenses(executor_profile_id, category_id)` unique;
-- `order_candidates`: не более одного `notified` на заказ; запрет нового запроса при `declined` / `expired` / `negotiation_rejected` / `terms_expired`;
+- `order_candidates`: не более одного `notified` на заказ; запрет нового запроса при `declined` / `auto_declined` / `expired` / `negotiation_rejected` / `terms_expired`;
 - `disputes.order_id` unique;
 - `reviews(order_id, from_user_id)` unique;
 - `payment_webhook_events.provider_event_id` unique;
 - `payment_records(provider_code, provider_payment_id)` unique.
 
 Рекомендуемые:
-- `orders(status)`, `orders(client_user_id, status)`;
-- `orders(occupancy_start_at, occupancy_end_at)` для проверки занятости;
+- `orders(status)`, `orders(client_user_id, status)`, `orders(search_mode, status)`;
 - `machinery_units(executor_profile_id)`, `machinery_units(location_lat, location_lng)` (позже PostGIS);
-- `executor_profiles(accepts_orders, subscription_status)`;
+- `executor_profiles(accepts_urgent_orders, subscription_status)`;
+- `order_candidates(executor_user_id, candidate_status)` — для автоотказа остальных срочных запросов при принятии;
 - `order_candidates(response_deadline_at)`, `orders(terms_confirm_deadline_at)`, `orders(execution_confirm_deadline_at)`;
 - `orders(cancel_reason_code)`, `orders(cancelled_by_role)`;
 - `orders(repeated_from_order_id)`;
@@ -277,6 +280,6 @@ erDiagram
 
 ## 6) Отложить
 
-- Повторяющийся календарь слотов исполнителя (занятость в MVP = пересечение заказов после принятия).
+- Календарь занятости исполнителя / техники (в MVP только ручной флаг срочных заказов).
 - Показ внутреннего рейтинга в UI.
 - `Company*`.
