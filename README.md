@@ -19,3 +19,4 @@
 - [RATING_PLAN.md](RATING_PLAN.md) — внутренний рейтинг
 - [CANCELLED_ORDERS.md](CANCELLED_ORDERS.md) — отмена и «такой же заказ»
 - [SERVICE_RULES.md](SERVICE_RULES.md) — правила сервиса и блокировка
+- [TECH_STACK.md](TECH_STACK.md) — стек, сервисы, цены и порядок запуска

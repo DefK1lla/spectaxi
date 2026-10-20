@@ -27,7 +27,12 @@
 - `accepts_urgent_orders` (bool) — чекбокс «принимаю срочные заказы» на экране профиля; меняет только сам исполнитель;
 - `subscription_status` (`none`, `active`, `paused`, `expired`);
 - `subscription_expires_at` (nullable);
+- `payout_card_token` (nullable) — синоним карты для выплат от ЮKassa (саму карту не храним);
+- `payout_card_mask` (nullable) — маска для UI (`•••• 1234`);
+- `payout_card_added_at` (nullable);
 - `created_at`, `updated_at`.
+
+Без `payout_card_token` нельзя «подтвердить условия» по заказу с `secure_deal`. Удалить карту нельзя, пока по заказу исполнителя со сделкой платёж `authorized` (ждёт выплаты); заменить можно.
 
 Создаётся при регистрации в режиме исполнителя или при первом переключении на исполнителя.
 
@@ -125,6 +130,8 @@
 Один к заказу. Сумму считает сервер.
 
 - `pricing_type`, `quantity` (> 0), `unit_rate`, `computed_amount` (`unit_rate × quantity`), `currency`;
+- `deal_fee_amount` — комиссия провайдера за безопасную сделку, которую платит клиент (`0` при `direct_payment`); считает сервер по проценту из конфига, с округлением вверх до рубля;
+- `amount_to_pay` (`computed_amount + deal_fee_amount`) — сколько платит клиент по сделке; исполнителю выплачивается `computed_amount`;
 - `priced_at` — момент фиксации.
 
 `unit_rate` копируется с машины при отправке запроса и при каждой правке заказчиком; смена ставок исполнителем на машине запись не меняет.
@@ -200,10 +207,45 @@
 
 ### `payment_records` / `payment_webhook_events`
 
-- `payment_records`: `order_id`, `provider_code`, `provider_payment_id`, `payment_status`, сумма = `computed_amount`, `created_at`, `updated_at`.
+- `payment_records`: `order_id`, `provider_code`, `provider_deal_id`, `provider_payment_id`, `provider_payout_id` (nullable), `payment_status`, сумма платежа = `amount_to_pay`, сумма выплаты = `computed_amount`, `created_at`, `updated_at`.
 - `payment_webhook_events`: `provider_event_id` unique, сырое тело, обработан.
 
-Холд только после создания платежа на `awaiting_payment`. Клиент сумму не задаёт.
+Холд только после создания платежа на `awaiting_payment`. Клиент сумму не задаёт. Механизм — «Безопасная сделка» ЮKassa: `authorized` = деньги на балансе сделки, `captured` = выплата исполнителю прошла (`ORDER_STATE_MACHINE.md`, раздел 5).
+
+### `admin_users`
+
+Админы — отдельные учётные записи, не пользователи приложения.
+
+- `id`, `email` unique, `password_hash`;
+- `totp_secret` — второй фактор (приложение-аутентификатор);
+- `is_active`, `last_login_at` (nullable);
+- `created_at`, `updated_at`.
+
+`reviewed_by_admin`, `closed_by_admin`, `resolved_by_admin` и автор `admin` в `dispute_messages` ссылаются на `admin_users.id`.
+
+### `auth_codes`
+
+Коды входа по телефону.
+
+- `id`, `phone`, `code_hash`, `channel` (`telegram` | `sms`);
+- `attempts` (неверные вводы), `expires_at`, `used_at` (nullable);
+- `created_at`.
+
+Лимиты частоты запросов кода считаются по этой таблице (на номер) и по IP.
+
+### `refresh_tokens`
+
+- `id`, `user_id`, `token_hash` unique, `expires_at`, `revoked_at` (nullable);
+- `created_at`.
+
+При блокировке пользователя все его refresh-токены отзываются.
+
+### `push_devices`
+
+- `id`, `user_id`, `expo_push_token` unique, `platform` (`ios` | `android`);
+- `last_seen_at`, `created_at`.
+
+Один пользователь — несколько устройств. Токен, который Expo вернул как недействительный, удаляется.
 
 ### `subscription_payments` (когда флаг подписки включён)
 
@@ -241,6 +283,10 @@ erDiagram
     users ||--o{ rating_events : score_changes
     users ||--o{ reviews : writes
     payment_records ||--o{ payment_webhook_events : updated_by
+    users ||--o{ refresh_tokens : sessions
+    users ||--o{ push_devices : devices
+    admin_users ||--o{ executor_licenses : reviews
+    admin_users ||--o{ disputes : closes
 ```
 
 ## 4) Инварианты
@@ -275,7 +321,10 @@ erDiagram
 - `disputes.order_id` unique;
 - `reviews(order_id, from_user_id)` unique;
 - `payment_webhook_events.provider_event_id` unique;
-- `payment_records(provider_code, provider_payment_id)` unique.
+- `payment_records(provider_code, provider_payment_id)` unique;
+- `admin_users.email` unique;
+- `refresh_tokens.token_hash` unique;
+- `push_devices.expo_push_token` unique.
 
 Рекомендуемые:
 - `orders(status)`, `orders(client_user_id, status)`, `orders(search_mode, status)`;
@@ -289,7 +338,9 @@ erDiagram
 - `orders(repeated_from_order_id)`;
 - `notifications(user_id, created_at)`;
 - `reviews(to_user_id)`;
-- `executor_licenses(status)` для очереди админки.
+- `executor_licenses(status)` для очереди админки;
+- `auth_codes(phone, created_at)` — последний код и лимиты;
+- `refresh_tokens(user_id)`, `push_devices(user_id)`.
 
 ## 6) Отложить
 

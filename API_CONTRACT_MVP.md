@@ -8,6 +8,10 @@
 - Время в формате ISO-8601 UTC, в том числе `planned_start_at` (дата и время начала планового заказа).
 - Все операции изменения заказа должны быть идемпотентны там, где возможны повторы (`Idempotency-Key`).
 
+Служебные эндпоинты (не для приложения):
+- `GET /health` — `200`, если API и база доступны, иначе `503`; без авторизации, для внешнего пинга;
+- `GET /metrics` — метрики в формате Prometheus, только с заголовком `Authorization: Bearer <METRICS_TOKEN>`; без персональных данных (`TECH_STACK.md`, раздел «Мониторинг»).
+
 Пример единого формата ошибки:
 
 ```json
@@ -33,12 +37,19 @@
 }
 ```
 
+Код уходит в Telegram, если номер там зарегистрирован, иначе по SMS (`TECH_STACK.md`).
+
 Ответ `200`:
 ```json
 {
-  "status": "code_sent"
+  "status": "code_sent",
+  "channel": "telegram",
+  "retry_after_sec": 60
 }
 ```
+
+Ошибки:
+- `429 TOO_MANY_REQUESTS` — повторный запрос раньше `retry_after_sec` или превышен лимит на номер / IP; в `details.retry_after_sec` — через сколько можно снова.
 
 ### `POST /auth/verify-code`
 
@@ -52,7 +63,23 @@
 }
 ```
 
-Ответ `200` включает `needs_registration: true`, если нет `full_name` / `current_mode`.
+Ответ `200`: `access_token` (короткий), `refresh_token`; `needs_registration: true`, если нет `full_name` / `current_mode`.
+
+Ошибки:
+- `400 INVALID_CODE` — неверный или истёкший код;
+- `429 TOO_MANY_ATTEMPTS` — исчерпаны попытки ввода, нужен новый код.
+
+### `POST /auth/refresh`
+
+`{ "refresh_token": "..." }` → новая пара токенов, старый refresh отзывается. Отозванный / истёкший / пользователь заблокирован — `401 UNAUTHORIZED`.
+
+### `POST /auth/logout`
+
+`{ "refresh_token": "...", "expo_push_token": "..." }` — отзывает refresh-токен и отвязывает push-токен этого устройства.
+
+### `PUT /users/me/push-devices`
+
+`{ "expo_push_token": "ExponentPushToken[...]", "platform": "ios" | "android" }`. Привязать устройство к текущему пользователю (при входе и при обновлении токена). Если токен был у другого пользователя — перепривязывается.
 
 ### `POST /auth/complete-registration`
 
@@ -133,6 +160,26 @@
 ```
 
 При `false` исполнитель не попадает в выдачу по **срочным** заказам; по плановым виден. Если `executor_subscription_enabled` и подписка не `active` — не в поиске вообще (`409 SUBSCRIPTION_REQUIRED` на попытку включить флаг без оплаты).
+
+### `GET /executor/payout-card`
+
+`{ "card_mask": "•••• 1234", "added_at": "..." }` или `null`.
+
+### `PUT /executor/payout-card`
+
+Привязать или заменить карту для выплат по безопасной сделке. Карту исполнитель вводит в виджете ЮKassa, в API приходит только синоним.
+
+Запрос:
+```json
+{
+  "payout_token": "<синоним карты от ЮKassa>",
+  "card_mask": "•••• 1234"
+}
+```
+
+### `DELETE /executor/payout-card`
+
+Удалить карту. `409 PAYOUT_PENDING`, если по заказу исполнителя со сделкой платёж `authorized` (ждёт выплаты).
 
 ### `POST /executor/subscription/pay`
 
@@ -235,13 +282,25 @@
 
 Тарифы, разрешённые категории (из `category_pricing_types`).
 
+## 4.1) Адреса
+
+Ключ DaData хранится только на сервере; приложение ходит сюда.
+
+### `GET /geo/suggest`
+
+Подсказки адреса при вводе. Параметры: `q` (обязательный, от 3 символов), `lat`, `lng` (опционально — приоритет подсказок рядом). Ответ — до 10 вариантов `{ "address_text", "location_lat", "location_lng" }`; вариант без координат (например, только город) в выдачу не попадает. Ответы кэшируются на сервере.
+
+### `GET /geo/reverse`
+
+Точка на карте → адрес. Параметры: `lat`, `lng`. Ответ `{ "address_text", "location_lat", "location_lng" }` или `404 ADDRESS_NOT_FOUND`.
+
 ## 5) Заказы клиента
 
 ### `POST /orders`
 
 `save_as_draft: true` → статус `draft`, без кандидата. Иначе сразу `published` и запрос одному исполнителю.
 
-В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_at` (если planned; **только в будущем**), точка (`address_text`, `location_lat`, `location_lng`), `description` (необязательно), `settlement_mode` (`direct_payment` по умолчанию; `secure_deal` — переключатель на экране отправки, виден только при включённом флаге). Даты окончания нет. Сервер пишет `unit_rate` и `computed_amount` по текущим ставкам машины и `search_activity_at`.
+В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_at` (если planned; **только в будущем**), точка (`address_text`, `location_lat`, `location_lng`), `description` (необязательно), `settlement_mode` (`direct_payment` по умолчанию; `secure_deal` — переключатель на экране отправки, виден только при включённом флаге). Даты окончания нет. Сервер пишет `unit_rate` и `computed_amount` по текущим ставкам машины и `search_activity_at`. При `secure_deal` — ещё `deal_fee_amount` (комиссия сделки, платит клиент) и `amount_to_pay`; экран отправки показывает их при включении переключателя.
 
 Ошибки:
 - `400 VALIDATION_ERROR` — в том числе `planned_start_at` в прошлом или отсутствует при `planned`, задан при `urgent`;
@@ -306,7 +365,7 @@
 
 ### `POST /orders/{orderId}/confirm-terms`
 
-Исполнитель фиксирует текущие условия. Только `in_negotiation`, до `terms_confirm_deadline_at`. Тело: `{ "details_version": 2 }`. Несовпадение версии — `409 STALE_ORDER_DETAILS`.
+Исполнитель фиксирует текущие условия. Только `in_negotiation`, до `terms_confirm_deadline_at`. Тело: `{ "details_version": 2 }`. Несовпадение версии — `409 STALE_ORDER_DETAILS`. `secure_deal` без привязанной карты для выплат — `409 PAYOUT_CARD_REQUIRED`.
 
 `direct_payment` → `in_progress` + assignment. `secure_deal` → `awaiting_payment` + `payment_deadline_at`.
 
@@ -476,13 +535,13 @@
 
 Обмен фиксируется при первом `accept`. Показываются `contact_phone`, `telegram_url`, `whatsapp_url`, `max_url`, доп. `messengers`.
 
-## 8) Безопасная сделка (опциональный контур)
+## 8) Безопасная сделка (опционально для клиента)
 
-Этот раздел может быть отключен feature-флагом до этапа 2.
+Работает с первого релиза через «Безопасную сделку» ЮKassa. Флаг `secure_deal_enabled` — аварийный выключатель.
 
 ### `POST /orders/{orderId}/secure-deal/create-payment`
 
-Создание платежа у провайдера. Только `awaiting_payment` + `secure_deal`. Сумма = `order_pricing.computed_amount` (клиент сумму не передаёт). После холда `authorized` → `in_progress`.
+Создание сделки и платежа у провайдера. Только `awaiting_payment` + `secure_deal`. Сумма = `order_pricing.amount_to_pay` (клиент сумму не передаёт). Оплата зачисляется на баланс сделки → `authorized` → `in_progress`. При `completed` сервер создаёт выплату исполнителю на привязанную карту на `computed_amount` → `captured`. При отмене / возврате в поиск — возврат клиенту.
 
 Запрос:
 ```json
@@ -511,12 +570,12 @@
 Webhook от платежного провайдера.
 
 Требования:
-- проверка подписи;
+- проверка подлинности: ЮKassa уведомления не подписывает, поэтому запрос принимается только с IP-адресов из списка ЮKassa, а статус объекта (платёж / выплата / сделка) сервер **перезапрашивает** через API провайдера и верит только ответу API, не телу уведомления;
 - идемпотентность по `provider_event_id`;
 - асинхронная обработка;
 - фиксация результата в `payment_webhook_events`.
 
-Если провайдер вернул холд по `expires_at` и статус платежа был `authorized` — заказ → `disputed`. Неоплаченный заказ провайдер не трогает; наш таймаут возвращает заказ в `published`. Срок жизни холда у провайдера — открытый вопрос (`PRODUCT_FOUNDATION.md`, раздел 12).
+Если истёк срок сделки (180 дней), провайдер вернул деньги клиенту, а статус платежа был `authorized` — заказ → `disputed`. Неоплаченный заказ провайдер не трогает; наш таймаут возвращает заказ в `published`.
 
 ## 8.1) Уведомления
 
@@ -535,6 +594,20 @@ Webhook от платежного провайдера.
 ## 9) Админка (не мобильное приложение)
 
 Закрытие спора, сообщения админа, блокировки, отмена заказов и разбор `other` — только здесь.
+
+Все `/admin/*` требуют токен админа; токен пользователя приложения не принимается (`403`).
+
+### `POST /admin/auth/login`
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "...",
+  "totp_code": "123456"
+}
+```
+
+Ответ `200`: `access_token` админа (короткий срок). Неверная любая часть — `401 INVALID_CREDENTIALS` (без уточнения, что именно). Учётные записи админов создаются вручную (команда на сервере), регистрации нет.
 
 ### `POST /admin/licenses/{licenseId}/review`
 
