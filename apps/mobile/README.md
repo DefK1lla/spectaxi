@@ -4,6 +4,8 @@ Expo (React Native) приложение SpexTaxi: клиент и исполн�
 
 Сейчас скелет: Expo Router, один экран «SpexTaxi».
 
+Структура UI — **FSD v2.1**: роутинг Expo в `src/app/`, слои в `src/_app`, `src/_pages` (см. [`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)).
+
 ## Запуск
 
 Из корня репозитория (предпочтительно):
@@ -72,7 +74,11 @@ eas build --profile production
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm test:coverage
 ```
+
+Unit-тесты: Vitest (`*.spec.ts` рядом с кодом). Пока без рендера нативного дерева — проверка бренда и экспорта экрана; RTL для RN добавим по мере UI.
 
 ## Документы
 

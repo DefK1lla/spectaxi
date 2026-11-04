@@ -1,0 +1,41 @@
+# Local / DADA-like stack: API + Postgres.
+# Usage from repo root:
+#   docker compose up --build
+# API: http://localhost:3000/api/v1/health
+# Postgres: localhost:5432 (user/pass/db: spectaxi)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: spectaxi
+      POSTGRES_PASSWORD: spectaxi
+      POSTGRES_DB: spectaxi
+    ports:
+      - "5432:5432"
+    volumes:
+      - spectaxi_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spectaxi -d spectaxi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgresql://spectaxi:spectaxi@postgres:5432/spectaxi
+      METRICS_TOKEN: local-metrics-token
+      # SENTRY_DSN:
+      # ENABLE_OPENAPI: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  spectaxi_pg:

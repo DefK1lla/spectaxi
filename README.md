@@ -4,6 +4,8 @@
 
 Продуктовые документы MVP — в [`docs/`](docs/). Скелет monorepo: `@spectaxi/api`, `@spectaxi/admin`, `@spectaxi/web`, `@spectaxi/mobile`, `@spectaxi/contracts`.
 
+DX: `pnpm lint` · `pnpm format` · `pnpm syncpack:check` · husky + lint-staged на commit. Деплой hello: [`docs/DEPLOY_HELLO.md`](docs/DEPLOY_HELLO.md).
+
 Клиент задаёт фильтр (тип, тариф, количество, срочный без даты или плановый с датой и временем начала, точка) — система считает цену. Календаря занятости нет: по срочным заказам исполнитель виден, пока у него включён флаг «принимаю срочные заказы». Ищет ближайшие машины, шлёт запрос одному. После «принять» открываются контакты, исполнитель за сутки подтверждает условия. Пока работа не началась, срыв матча возвращает заказ к поиску. Спор — одна сущность на заказ. Типы транспорта и типы лицензий ведёт админ.
 
 ## Требования
@@ -38,12 +40,12 @@ cp apps/api/.env.example apps/api/.env         # Windows: copy apps\api\.env.exa
 
 Из корня репозитория:
 
-| Команда | Что | URL |
-| --- | --- | --- |
-| `pnpm dev:api` | NestJS API | http://localhost:3000/api/v1/health , `/api/v1/ready` |
-| `pnpm dev:admin` | Next.js админка | http://localhost:3001 |
-| `pnpm dev:web` | Next.js публичный веб | http://localhost:3002 |
-| `pnpm dev:mobile` | Expo | Metro / Expo Dev Tools |
+| Команда           | Что                   | URL                                                   |
+| ----------------- | --------------------- | ----------------------------------------------------- |
+| `pnpm dev:api`    | NestJS API            | http://localhost:3000/api/v1/health , `/api/v1/ready` |
+| `pnpm dev:admin`  | Next.js админка       | http://localhost:3001                                 |
+| `pnpm dev:web`    | Next.js публичный веб | http://localhost:3002                                 |
+| `pnpm dev:mobile` | Expo                  | Metro / Expo Dev Tools                                |
 
 Можно запускать несколько команд в разных терминалах.
 
@@ -51,12 +53,12 @@ cp apps/api/.env.example apps/api/.env         # Windows: copy apps\api\.env.exa
 
 ## Сборка
 
-| Команда | Что |
-| --- | --- |
-| `pnpm build:contracts` | Сборка `@spectaxi/contracts` |
-| `pnpm build:api` | Nest → `apps/api/dist` (contracts собирается автоматически) |
-| `pnpm build:admin` | Next.js production build (админка) |
-| `pnpm build:web` | Next.js production build (публичный веб) |
+| Команда                | Что                                                         |
+| ---------------------- | ----------------------------------------------------------- |
+| `pnpm build:contracts` | Сборка `@spectaxi/contracts`                                |
+| `pnpm build:api`       | Nest → `apps/api/dist` (contracts собирается автоматически) |
+| `pnpm build:admin`     | Next.js production build (админка)                          |
+| `pnpm build:web`       | Next.js production build (публичный веб)                    |
 
 У mobile отдельной `build:*` из корня нет: нативные/магазинные сборки — через EAS (`apps/mobile/eas.json`), см. [`apps/mobile/README.md`](apps/mobile/README.md).
 
@@ -73,7 +75,11 @@ pnpm build:web && pnpm --filter @spectaxi/web start
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm test:coverage   # отчёт coverage, без порога fail
 ```
+
+Unit-тесты — Vitest; файлы рядом с кодом (`*.spec.ts` / `*.spec.tsx`). CI: `.github/workflows/ci.yml`.
 
 ## Документы
 
@@ -89,3 +95,8 @@ pnpm typecheck
 - [CANCELLED_ORDERS.md](docs/CANCELLED_ORDERS.md) — отмена и «такой же заказ»
 - [SERVICE_RULES.md](docs/SERVICE_RULES.md) — правила сервиса и блокировка
 - [TECH_STACK.md](docs/TECH_STACK.md) — стек, сервисы, цены и порядок запуска
+- [FRONTEND_FSD.md](docs/FRONTEND_FSD.md) — Feature-Sliced Design на фронтенде
+- [BACKEND_STRUCTURE.md](docs/BACKEND_STRUCTURE.md) — доменные Nest-модули API
+- [NAMING.md](docs/NAMING.md) — имена файлов, папок и идентификаторов
+- [DEPLOY_HELLO.md](docs/DEPLOY_HELLO.md) — деплой hello: DADA (API) + Vercel (admin/web)
+- [tasks/](docs/tasks/) — ручные задачи (DADA, Vercel, Sentry, Grafana, UptimeRobot)

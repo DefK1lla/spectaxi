@@ -4,6 +4,8 @@ Next.js админка SpexTaxi (App Router).
 
 Сейчас скелет: одна страница «SpexTaxi Admin». Экраны лицензий, типов транспорта, споров — позже.
 
+Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages` (см. [`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)).
+
 ## Запуск
 
 Из корня репозитория (предпочтительно):
@@ -36,7 +38,11 @@ pnpm --filter @spectaxi/admin start
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm test:coverage
 ```
+
+Unit-тесты: Vitest + Testing Library (`*.spec.tsx` рядом с компонентами).
 
 ## Документы
 

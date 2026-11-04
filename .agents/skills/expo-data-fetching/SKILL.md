@@ -39,7 +39,7 @@ Use this skill when:
 
 Design **loading**, **error**, **empty**, and **content** for screens that load data. These can overlap: a refresh error should coexist with cached content.
 
-- **Loading ≠ empty.** Empty means *resolved with zero items*, not missing data. Handle initial loading, failure, and hydration before checking list length. In TanStack Query v5, `isLoading` means the first fetch is running; a disabled or offline-paused query can have no data without being loading. Show the prerequisite or offline state in that case.
+- **Loading ≠ empty.** Empty means _resolved with zero items_, not missing data. Handle initial loading, failure, and hydration before checking list length. In TanStack Query v5, `isLoading` means the first fetch is running; a disabled or offline-paused query can have no data without being loading. Show the prerequisite or offline state in that case.
 - **Empty is a designed state, not a blank list.** Use `ListEmptyComponent` on FlatList/FlashList: explain why it is empty and offer the relevant next action. "No items yet" can offer Create; "No results" should offer changing or clearing the search/filter.
 - **Refetches keep stale content.** Render cached `data` even if a refresh fails, with a nonblocking error and retry. Use `isLoading` for first-fetch spinners and `isFetching` for background activity; prefer a skeleton for a slow initial load with a known layout, and `RefreshControl` for user-initiated refresh.
 - **Gate on hydration.** When initial UI or a redirect depends on persisted state (auth token, onboarding flag), the root layout renders nothing - or the splash - until that state has loaded. Deciding on unhydrated state flashes the wrong screen on every cold start and misroutes deep links that arrive before hydration.
@@ -126,15 +126,25 @@ function UserProfile({ userId }: { userId: string }) {
   });
 
   if (data === undefined) {
-    if (error) return <ErrorState message={error.message} onRetry={() => refetch()} />;
+    if (error)
+      return <ErrorState message={error.message} onRetry={() => refetch()} />;
     if (fetchStatus === "paused") return <OfflineState />;
     return <Loading />;
   }
 
   return (
     <>
-      {error && <InlineError message="Could not refresh. Showing saved data." onRetry={() => refetch()} />}
-      {data === null ? <EmptyState message="User not found" /> : <Profile user={data} />}
+      {error && (
+        <InlineError
+          message="Could not refresh. Showing saved data."
+          onRetry={() => refetch()}
+        />
+      )}
+      {data === null ? (
+        <EmptyState message="User not found" />
+      ) : (
+        <Profile user={data} />
+      )}
     </>
   );
 }
@@ -162,7 +172,13 @@ function CreateUserForm() {
   };
 
   // Form keeps its draft on error and disables Submit while isLoading.
-  return <Form onSubmit={handleSubmit} isLoading={mutation.isPending} error={mutation.error?.message} />;
+  return (
+    <Form
+      onSubmit={handleSubmit}
+      isLoading={mutation.isPending}
+      error={mutation.error?.message}
+    />
+  );
 }
 ```
 
@@ -174,7 +190,11 @@ function CreateUserForm() {
 
 ```tsx
 class ApiError extends Error {
-  constructor(message: string, public status: number, public code?: string) {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -189,7 +209,7 @@ const fetchWithErrorHandling = async (url: string, options?: RequestInit) => {
       throw new ApiError(
         error.message || "Request failed",
         response.status,
-        error.code
+        error.code,
       );
     }
 
@@ -210,7 +230,7 @@ const fetchWithErrorHandling = async (url: string, options?: RequestInit) => {
 const fetchWithRetry = async (
   url: string,
   options?: RequestInit,
-  retries = 3
+  retries = 3,
 ) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -469,9 +489,12 @@ User: "How do I load data for a page in Expo Router?"
 -> See references/expo-router-loaders.md for route-level loaders (web, SDK 55+). For native, use React Query or fetch.
 
 ## Submitting Feedback
+
 If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
+
 ```bash
 npx --yes @expo/agent-cli@latest feedback --category skills --subject "expo-data-fetching" "<actionable feedback>"
 ```
+
 Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
 If an agent repeatedly fails at an Expo task or the user has to step in, submit a brief report of the task, expected result, and what went wrong using `--category evals` and the relevant Expo package or command as `--subject`.

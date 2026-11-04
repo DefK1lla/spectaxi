@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+coverage
+.next
+.expo
+pnpm-lock.yaml
+*.tsbuildinfo
+apps/mobile/ios
+apps/mobile/android
+apps/api/prisma/migrations
+.agents
+skills-lock.json

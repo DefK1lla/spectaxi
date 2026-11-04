@@ -26,6 +26,14 @@ pnpm dev
 - Liveness: http://localhost:3000/api/v1/health
 - Readiness: http://localhost:3000/api/v1/ready  
   (проверка БД — после включения Prisma)
+- Admin stub: http://localhost:3000/api/v1/admin/health
+- Metrics: http://localhost:3000/api/v1/metrics (`Authorization: Bearer $METRICS_TOKEN`)
+- OpenAPI (если `ENABLE_OPENAPI=true`): http://localhost:3000/api/docs
+
+Структура модулей: [BACKEND_STRUCTURE.md](../../docs/BACKEND_STRUCTURE.md)  
+(логика в домене; `/admin/*` — только HTTP-поверхность, не склад бизнес-правил).
+
+Docker: `docker compose up --build` из корня (API + Postgres). Деплой DADA/Vercel: [DEPLOY_HELLO.md](../../docs/DEPLOY_HELLO.md).
 
 ## База данных (Neon)
 
@@ -45,7 +53,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require
 
 1. Раскомментируй `PrismaModule` в `src/app.module.ts`.
 2. Раскомментируй `$connect` / `$disconnect` в `src/prisma/prisma.service.ts`.
-3. Раскомментируй проверку в `GET /ready` (`src/health.controller.ts`).
+3. Раскомментируй проверку в `GET /ready` (`src/modules/health/api/health-controller/health.controller.ts`).
 4. Примени схему:
 
 ```bash
@@ -81,10 +89,15 @@ pnpm --filter @spectaxi/api start
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm test:coverage
 ```
+
+Unit-тесты: Vitest + `@nestjs/testing`. Мок Prisma — `src/prisma/prisma.mock.ts`.
 
 ## Документы
 
+- [BACKEND_STRUCTURE.md](../../docs/BACKEND_STRUCTURE.md) — доменные Nest-модули
 - [API_CONTRACT_MVP.md](../../docs/API_CONTRACT_MVP.md)
 - [TECH_STACK.md](../../docs/TECH_STACK.md) — Neon, прод-БД
 - [DOMAIN_MODEL_AND_ERD.md](../../docs/DOMAIN_MODEL_AND_ERD.md)

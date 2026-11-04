@@ -1,0 +1,42 @@
+---
+description: Nest domain modules, admin API surface, colocated unit folders
+globs: apps/api/**/*.{ts,md},docs/BACKEND_STRUCTURE.md
+alwaysApply: false
+---
+
+# Nest API structure
+
+Источник правды: `docs/BACKEND_STRUCTURE.md`. Именование: `docs/NAMING.md`.
+
+## Домен
+
+- Один домен ≈ один Nest Module в `apps/api/src/modules/<name>/`.
+- В корне домена — `*.module.ts`; остальное в `api/`, `services/`, `dto/`, `providers/`.
+- Бизнес-логика только в доменном модуле. Между доменами — через `exports`.
+
+## Colocation (обязательно)
+
+- Один контроллер/сервис/provider = одна папка: `orders-controller/`, `orders-service/`, …
+- В папке рядом: исходник + `*.spec.ts`.
+- Не складывать все `*.ts` / `*.spec.ts` плоско в корень модуля, когда юнитов больше одного.
+
+```text
+modules/orders/
+  orders.module.ts
+  api/orders-controller/orders.controller.ts
+  api/orders-controller/orders.controller.spec.ts
+  api/orders-admin-controller/…
+  services/orders-service/…
+  dto/
+```
+
+## Админ = поверхность API, не домен
+
+- `AdminModule` — каркас (JWT/TOTP, guards, stub). Не склад логики заказов/лицензий/споров.
+- Админ-ручки: `*-admin-controller/` внутри домена + вызов доменного сервиса.
+- Запрещено переносить доменную логику в `modules/admin`.
+
+```typescript
+// ❌ BAD — логика в AdminModule
+// ✅ GOOD — OrdersService + api/orders-admin-controller/
+```

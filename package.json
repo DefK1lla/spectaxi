@@ -7,6 +7,7 @@
   },
   "scripts": {
     "postinstall": "pnpm --filter @spectaxi/contracts build",
+    "prepare": "husky",
     "dev:api": "pnpm --filter @spectaxi/api dev",
     "dev:admin": "pnpm --filter @spectaxi/admin dev",
     "dev:web": "pnpm --filter @spectaxi/web dev",
@@ -16,6 +17,21 @@
     "build:web": "pnpm --filter @spectaxi/web build",
     "build:contracts": "pnpm --filter @spectaxi/contracts build",
     "lint": "pnpm -r --if-present lint",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:coverage": "pnpm -r --if-present test:coverage",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "syncpack:check": "syncpack list-mismatches",
+    "syncpack:fix": "syncpack fix-mismatches",
+    "syncpack:lint": "syncpack lint"
+  },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
+    "syncpack": "^13.0.4"
   }
 }

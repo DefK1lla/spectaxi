@@ -131,11 +131,7 @@ const [date, setDate] = useState(new Date());
 ### Time Intervals
 
 ```tsx
-<DateTimePicker
-  value={date}
-  mode="time"
-  minuteInterval={15}
-/>
+<DateTimePicker value={date} mode="time" minuteInterval={15} />
 ```
 
 ### Min/Max Dates
@@ -166,7 +162,7 @@ import { colors } from "@/theme/colors";
     borderRadius: 8,
     backgroundColor: colors.secondarySystemBackground,
   }}
-/>
+/>;
 ```
 
 ### Keyboard Types

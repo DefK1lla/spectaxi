@@ -1,0 +1,1 @@
+export { initNativeSentry } from "./initNativeSentry";

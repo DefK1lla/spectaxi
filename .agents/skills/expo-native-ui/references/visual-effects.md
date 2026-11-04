@@ -51,7 +51,7 @@ BlurView requires `overflow: 'hidden'` to clip rounded corners:
   intensity={100}
   style={{
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   }}
 />
 ```
@@ -61,20 +61,20 @@ BlurView requires `overflow: 'hidden'` to clip rounded corners:
 Common pattern for overlaying blur on content:
 
 ```tsx
-<View style={{ position: 'relative' }}>
-  <Image source={{ uri: '...' }} style={{ width: '100%', height: 200 }} />
+<View style={{ position: "relative" }}>
+  <Image source={{ uri: "..." }} style={{ width: "100%", height: 200 }} />
   <BlurView
     tint="systemUltraThinMaterial"
     intensity={80}
     style={{
-      position: 'absolute',
+      position: "absolute",
       bottom: 0,
       left: 0,
       right: 0,
       padding: 16,
     }}
   >
-    <Text style={{ color: 'white' }}>Caption</Text>
+    <Text style={{ color: "white" }}>Caption</Text>
   </BlurView>
 </View>
 ```
@@ -88,7 +88,7 @@ import { GlassView } from "expo-glass-effect";
 
 <GlassView style={{ borderRadius: 16, padding: 16 }}>
   <Text>Content inside glass</Text>
-</GlassView>
+</GlassView>;
 ```
 
 ### Interactive Glass
@@ -104,7 +104,7 @@ import { colors } from "@/theme/colors";
   <Pressable style={{ padding: 12 }} onPress={handlePress}>
     <SymbolView name="plus" tintColor={colors.label} size={36} />
   </Pressable>
-</GlassView>
+</GlassView>;
 ```
 
 ### Glass Buttons
@@ -131,7 +131,7 @@ function GlassButton({ icon, onPress }) {
 
 ```tsx
 <GlassView style={{ borderRadius: 20, padding: 20 }}>
-  <Text style={{ fontSize: 18, fontWeight: '600', color: colors.label }}>
+  <Text style={{ fontSize: 18, fontWeight: "600", color: colors.label }}>
     Card Title
   </Text>
   <Text style={{ color: colors.secondaryLabel, marginTop: 8 }}>
@@ -145,7 +145,10 @@ function GlassButton({ icon, onPress }) {
 Check both guards: `isLiquidGlassAvailable()` (OS support) and `isGlassEffectAPIAvailable()` — some iOS 26 beta versions lack the API and crash without the second check.
 
 ```tsx
-import { isLiquidGlassAvailable, isGlassEffectAPIAvailable } from "expo-glass-effect";
+import {
+  isLiquidGlassAvailable,
+  isGlassEffectAPIAvailable,
+} from "expo-glass-effect";
 
 const canUseGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 ```
@@ -153,7 +156,11 @@ const canUseGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
 ### Fallback Pattern
 
 ```tsx
-import { GlassView, isLiquidGlassAvailable, isGlassEffectAPIAvailable } from "expo-glass-effect";
+import {
+  GlassView,
+  isLiquidGlassAvailable,
+  isGlassEffectAPIAvailable,
+} from "expo-glass-effect";
 import { BlurView } from "expo-blur";
 
 function AdaptiveGlass({ children, style }) {
@@ -169,7 +176,7 @@ function AdaptiveGlass({ children, style }) {
 }
 ```
 
-When the user has Reduce Transparency enabled (`AccessibilityInfo.isReduceTransparencyEnabled()`), skip glass *and* blur — render a solid `colors.systemBackground` surface instead.
+When the user has Reduce Transparency enabled (`AccessibilityInfo.isReduceTransparencyEnabled()`), skip glass _and_ blur — render a solid `colors.systemBackground` surface instead.
 
 ## Sheet with Glass Background
 

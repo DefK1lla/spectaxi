@@ -1,0 +1,25 @@
+---
+description: SpexTaxi naming for files, folders, and TypeScript identifiers
+alwaysApply: true
+---
+
+# Naming
+
+Источник правды: `docs/NAMING.md`.
+
+## Identifiers
+
+- `camelCase` — variables, functions, methods, hooks
+- `PascalCase` — React components, Nest classes, types, interfaces, enums
+- `UPPER_SNAKE` — true constants (`APP_BRAND`)
+- Never kebab/snake in identifier names
+
+## Files & folders
+
+- Folders / slices / units: `kebab-case` (`home-page/`, `orders-service/`)
+- Utils, models, hooks, dto, non-component specs: `kebab-case`
+- **React component files: `PascalCase`** matching export (`HomePage.tsx`, `HomePage.spec.tsx`)
+- Nest: `name.role.ts` (`orders.controller.ts`, `auth.service.ts`)
+- Unit/slice public API: `index.ts`
+
+Do not rename Next/Expo reserved route files (`page.tsx`, `_layout.tsx`, …).

@@ -4,6 +4,8 @@
 
 Скелет: одна страница «SpexTaxi». Клиентские сценарии (поиск, заказы) в MVP — в мобильном приложении; этот пакет — задел под лендинг / веб-клиент позже. **Не** Expo Web: карта, пуши и платежи на нативе проще держать в `apps/mobile`.
 
+Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages` (см. [`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)).
+
 ## Запуск
 
 Из корня репозитория (предпочтительно):
@@ -36,7 +38,11 @@ pnpm --filter @spectaxi/web start
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm test:coverage
 ```
+
+Unit-тесты: Vitest + Testing Library (`*.spec.tsx` рядом с компонентами).
 
 ## Документы
 

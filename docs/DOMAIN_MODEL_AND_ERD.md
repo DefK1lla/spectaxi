@@ -73,7 +73,7 @@
 ### `category_pricing_types`
 
 - `category_id`, `pricing_type_code` — PK;
-какие тарифы разрешены типу. Источник истины для UI и API, не хардкод клиента.
+  какие тарифы разрешены типу. Источник истины для UI и API, не хардкод клиента.
 
 ### `machinery_units`
 
@@ -344,6 +344,7 @@ erDiagram
 ## 5) Индексы и ограничения
 
 Обязательные:
+
 - `users.phone` unique;
 - `currencies.code` PK; в MVP сид `RUB` + `secure_deal_provider_code = yookassa`;
 - `executor_profiles.user_id` unique;
@@ -363,6 +364,7 @@ erDiagram
 - `push_devices.expo_push_token` unique.
 
 Рекомендуемые:
+
 - `orders(status)`, `orders(client_user_id, status)`, `orders(search_mode, status)`;
 - `machinery_units(executor_profile_id)`, `machinery_units(location_lat, location_lng)` (позже PostGIS);
 - `executor_profiles(accepts_urgent_orders, subscription_status)`;

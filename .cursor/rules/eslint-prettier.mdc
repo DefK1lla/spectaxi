@@ -1,0 +1,27 @@
+---
+description: ESLint boundaries, Prettier, and format discipline for SpexTaxi
+alwaysApply: true
+---
+
+# ESLint / Prettier
+
+Sources: `docs/NAMING.md`, `docs/FRONTEND_FSD.md`, `docs/BACKEND_STRUCTURE.md`, root `.prettierrc.json`.
+
+## Prettier (do not fight the formatter)
+
+- double quotes, semicolons, `trailingComma: "all"`, `printWidth: 80`, LF
+- Run `pnpm format` before finishing large edits; CI runs `pnpm format:check`
+- Do not hand-format in a conflicting style
+
+## ESLint boundaries
+
+- **Frontends** (`eslint/fsd-boundaries.mjs`): import only downward FSD layers; no cross-slice imports between `_pages` / `features` / `entities`
+- **API** (`eslint/nest-boundaries.mjs`): a domain may not deep-import another domain; cross-domain only via `*.module.ts` (+ `common` / `prisma`)
+- Do not disable boundary rules with eslint-comments unless fixing a false positive and documenting why
+
+## Scripts
+
+- `pnpm lint` — ESLint in all packages
+- `pnpm format` / `pnpm format:check` — Prettier
+- `pnpm syncpack:check` — aligned dependency versions
+- pre-commit (husky): lint-staged → eslint --fix + prettier --write on staged files

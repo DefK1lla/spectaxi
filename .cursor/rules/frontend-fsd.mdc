@@ -1,0 +1,34 @@
+---
+description: FSD + colocated unit folders for SpexTaxi frontends
+globs: apps/admin/**/*.{ts,tsx},apps/web/**/*.{ts,tsx},apps/mobile/**/*.{ts,tsx},docs/FRONTEND_FSD.md
+alwaysApply: false
+---
+
+# FSD for SpexTaxi frontends
+
+Follow Feature-Sliced Design v2.1 (skill: `feature-sliced-design`, doc: `docs/FRONTEND_FSD.md`).
+
+- Next.js: framework routes in package-root `app/`; FSD in `src/_app`, `src/_pages`, later `shared` / `features` / `entities`.
+- Expo: framework routes in `src/app/`; FSD in `src/_app`, `src/_pages`, …
+- Do not create empty layers. Prefer keeping code in `_pages` until extraction rule holds.
+- Do not use `widgets` unless explicitly justified.
+- Import only downward; slice public API via `index.ts`.
+- Route files stay thin re-exports from `@/_pages/...`.
+
+## Naming
+
+See `docs/NAMING.md`. React component files: **PascalCase** (`HomePage.tsx`).
+
+## Colocation (обязательно)
+
+- One component / function / hook / model = one kebab-case folder.
+- Inside: implementation + `*.spec.*` beside it + `index.ts` re-export.
+- Segments (`ui/`, `model/`, `api/`) hold unit folders, not flat sibling files.
+- Outside the unit, import via its `index.ts` (or the slice `index.ts`).
+
+```text
+_pages/home/ui/home-page/
+  HomePage.tsx
+  HomePage.spec.tsx
+  index.ts
+```

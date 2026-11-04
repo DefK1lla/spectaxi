@@ -57,6 +57,12 @@
       "computedHash": "586318180c0d846948d3189250dd7cb5c225d4fa48eee5b57dc964aa5cade10e",
       "installMode": "copy"
     },
+    "feature-sliced-design": {
+      "source": "feature-sliced/skills",
+      "sourceType": "github",
+      "skillPath": "feature-sliced-design/SKILL.md",
+      "computedHash": "4ecd886c794a84cf34b9292e763e3c7ef1ba99e4f52a4e576c1234a22069446c"
+    },
     "next-dev-loop": {
       "source": "vercel/next.js",
       "sourceType": "github",

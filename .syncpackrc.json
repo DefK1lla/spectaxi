@@ -1,0 +1,51 @@
+{
+  "$schema": "https://unpkg.com/syncpack@13.0.4/dist/schema.json",
+  "indent": "  ",
+  "versionGroups": [
+    {
+      "label": "local workspace packages",
+      "dependencies": ["@spectaxi/**"],
+      "isIgnored": true
+    },
+    {
+      "label": "single typescript",
+      "dependencies": ["typescript"],
+      "pinVersion": "5.9.3"
+    },
+    {
+      "label": "single vitest",
+      "dependencies": ["vitest", "@vitest/coverage-v8"],
+      "pinVersion": "3.2.4"
+    },
+    {
+      "label": "single eslint 9.39.x",
+      "dependencies": ["eslint"],
+      "pinVersion": "9.39.1"
+    },
+    {
+      "label": "single react",
+      "dependencies": ["react", "react-dom"],
+      "pinVersion": "19.3.0"
+    },
+    {
+      "label": "single next",
+      "dependencies": ["next", "eslint-config-next"],
+      "pinVersion": "16.4.5"
+    },
+    {
+      "label": "prisma suite",
+      "dependencies": ["@prisma/client", "prisma", "@prisma/adapter-pg"],
+      "pinVersion": "7.10.1"
+    },
+    {
+      "label": "@types/react aligned with RN/Expo",
+      "dependencies": ["@types/react"],
+      "pinVersion": "~19.3.0"
+    },
+    {
+      "label": "@types/node — prefer 24 across apps",
+      "dependencies": ["@types/node"],
+      "pinVersion": "^24.10.1"
+    }
+  ]
+}
