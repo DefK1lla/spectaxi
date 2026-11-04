@@ -13,7 +13,7 @@ RUN corepack enable && corepack prepare pnpm@12.11.2 --activate
 WORKDIR /app
 
 FROM base AS build
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/contracts/package.json packages/contracts/
 COPY apps/api/package.json apps/api/
 # Только зависимости: lifecycle scripts ждут исходники (prisma-generate, contracts tsc).
