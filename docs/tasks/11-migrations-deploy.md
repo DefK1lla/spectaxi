@@ -5,20 +5,25 @@
 ## Что уже в репо
 
 - Prisma 7.10 в `apps/api` (модуль Nest пока **выключен**)
-- Скрипты:
-  - `pnpm --filter @spectaxi/api prisma:migrate` — dev
-  - `pnpm --filter @spectaxi/api prisma:migrate:deploy` — prod/стенд (`prisma migrate deploy`)
-- Пока схема-заглушка `SkeletonMeta` — полноценный ERD ещё не перенесён
+- Скрипты в monorepo (нужен пакет `prisma` из **devDependencies**):
+  - `pnpm --filter @spectaxi/api prisma:migrate` — dev (`prisma migrate dev`)
+  - `pnpm --filter @spectaxi/api prisma:migrate:deploy` — стенд (`prisma migrate deploy`)
+- Docker-образ API (`apps/api/Dockerfile`) — **runtime без CLI**: `pnpm deploy --prod` не кладёт `prisma`, только сгенерированный `@prisma/client`. Поэтому `migrate deploy` **нельзя** запускать из контейнера приложения (`node dist/main.js` / `/out`).
 
 ## Что сделать на стенде
 
 - [ ] Задать `DATABASE_URL` ([04-database-url.md](./04-database-url.md))
-- [ ] Один раз создать миграцию локально (когда появятся модели): `prisma:migrate`
-- [ ] На DADA: release / one-off команда из корня образа/CI:
+- [ ] Один раз создать миграцию локально (когда появятся модели):
   ```bash
+  pnpm --filter @spectaxi/api prisma:migrate
+  ```
+- [ ] Накатить миграции на Neon **из CI или с машины разработчика** (не из prod-образа):
+  ```bash
+  # из корня monorepo, с DATABASE_URL стенда
+  export DATABASE_URL="postgresql://…neon…"
   pnpm --filter @spectaxi/api prisma:migrate:deploy
   ```
-  (точный синтаксис зависит от того, как DADA запускает команды — иногда `npx prisma migrate deploy` из `apps/api` с `DATABASE_URL`)
+  Альтернатива one-off: временный контейнер/job с Node + `pnpm install` (с devDeps) и той же командой — либо отдельный migrate-образ, если позже понадобится в DADA release hook. Главное: в job должен быть CLI `prisma` и папка `apps/api/prisma`.
 - [ ] Раскомментировать `PrismaModule` + `$connect` + проверку в `/ready` (см. `apps/api/README.md`)
 - [ ] UptimeRobot начнёт ловить падение БД через `/ready`
 
