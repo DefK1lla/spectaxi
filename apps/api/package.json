@@ -1,0 +1,42 @@
+{
+  "name": "@spectaxi/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "node ./scripts/prisma-generate.mjs",
+    "predev": "pnpm --filter @spectaxi/contracts build && node ./scripts/prisma-generate.mjs",
+    "prebuild": "pnpm --filter @spectaxi/contracts build && node ./scripts/prisma-generate.mjs",
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prisma:generate": "node ./scripts/prisma-generate.mjs",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/platform-express": "^11.1.9",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@spectaxi/contracts": "workspace:*",
+    "dotenv": "^18.0.9",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@nestjs/cli": "^11.0.14",
+    "@nestjs/schematics": "^11.0.9",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.23.1",
+    "eslint": "^9.39.1",
+    "prisma": "7.10.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4"
+  }
+}

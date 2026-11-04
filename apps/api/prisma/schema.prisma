@@ -1,0 +1,21 @@
+// Скелет схемы под Neon / PostgreSQL (Prisma ORM 7).
+// Доменные модели из docs/DOMAIN_MODEL_AND_ERD.md добавим позже.
+// URL подключения — в prisma.config.ts (не здесь).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Заглушка, чтобы `prisma generate` работал до появления реальных сущностей.
+/// Удалить, когда появится первая доменная модель.
+model SkeletonMeta {
+  id        String   @id @default(cuid())
+  label     String   @default("spectaxi")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("skeleton_meta")
+}

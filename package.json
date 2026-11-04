@@ -1,0 +1,21 @@
+{
+  "name": "spectaxi",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "pnpm --filter @spectaxi/contracts build",
+    "dev:api": "pnpm --filter @spectaxi/api dev",
+    "dev:admin": "pnpm --filter @spectaxi/admin dev",
+    "dev:web": "pnpm --filter @spectaxi/web dev",
+    "dev:mobile": "pnpm --filter @spectaxi/mobile start",
+    "build:api": "pnpm --filter @spectaxi/api build",
+    "build:admin": "pnpm --filter @spectaxi/admin build",
+    "build:web": "pnpm --filter @spectaxi/web build",
+    "build:contracts": "pnpm --filter @spectaxi/contracts build",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck"
+  }
+}
