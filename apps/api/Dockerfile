@@ -21,12 +21,12 @@ RUN pnpm install --frozen-lockfile --filter @spectaxi/api... --ignore-scripts
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?sslmode=disable"
+# generate явно на build (с CLI из devDependencies); postinstall при deploy
+# без CLI просто no-op — см. scripts/prisma-generate.mjs
 RUN pnpm --filter @spectaxi/contracts build \
   && pnpm --filter @spectaxi/api prisma:generate \
   && pnpm --filter @spectaxi/api build \
-  # --ignore-scripts: postinstall снова зовёт prisma CLI, а в --prod его нет;
-  # client уже сгенерирован шагом выше и попадёт в deploy из store.
-  && pnpm --filter @spectaxi/api deploy --prod --ignore-scripts /out
+  && pnpm --filter @spectaxi/api deploy --prod /out
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app

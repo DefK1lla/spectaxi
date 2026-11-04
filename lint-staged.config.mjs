@@ -1,8 +1,9 @@
 export default {
-  "apps/api/**/*.{ts,tsx,mjs}": [
+  "apps/api/src/**/*.{ts,tsx}": [
     "pnpm --filter @spectaxi/api exec eslint --fix --max-warnings=0",
     "prettier --write",
   ],
+  "apps/api/**/*.{mjs,json,md}": ["prettier --write"],
   "apps/admin/**/*.{ts,tsx,mjs}": [
     "pnpm --filter @spectaxi/admin exec eslint --fix --max-warnings=0",
     "prettier --write",

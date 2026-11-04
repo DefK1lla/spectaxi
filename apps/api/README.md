@@ -21,6 +21,8 @@ pnpm dev
 
 Перед `dev` / `build` собираются `@spectaxi/contracts` и Prisma Client.
 
+`postinstall` / `prisma:generate`: если пакета `prisma` (CLI) нет (prod-deploy без devDependencies) — скрипт тихо выходит; client к этому моменту уже должен быть сгенерирован на этапе сборки образа.
+
 По умолчанию порт `3000` (`PORT` в `.env`).
 
 - Liveness: http://localhost:3000/api/v1/health

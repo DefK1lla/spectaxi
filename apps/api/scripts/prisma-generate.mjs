@@ -11,7 +11,17 @@ const require = createRequire(path.join(apiRoot, "package.json"));
 process.env.DATABASE_URL ??=
   "postgresql://user:pass@127.0.0.1:5432/spectaxi?schema=public";
 
-const prismaCli = require.resolve("prisma/build/index.js");
+let prismaCli;
+try {
+  prismaCli = require.resolve("prisma/build/index.js");
+} catch {
+  // `prisma` — devDependency. В prod-deploy / runtime CLI нет — это ок:
+  // client уже сгенерирован на build (`pnpm prisma:generate`) и лежит в @prisma/client.
+  console.info(
+    "[prisma-generate] prisma CLI not installed — skip (expected without devDependencies)",
+  );
+  process.exit(0);
+}
 
 const result = spawnSync(process.execPath, [prismaCli, "generate"], {
   stdio: "inherit",

@@ -8,7 +8,7 @@ const nestBoundaries = nestBoundariesConfig();
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**"],
+    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
