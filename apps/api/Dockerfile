@@ -24,7 +24,9 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?sslmode=disable"
 RUN pnpm --filter @spectaxi/contracts build \
   && pnpm --filter @spectaxi/api prisma:generate \
   && pnpm --filter @spectaxi/api build \
-  && pnpm --filter @spectaxi/api deploy --prod /out
+  # --ignore-scripts: postinstall снова зовёт prisma CLI, а в --prod его нет;
+  # client уже сгенерирован шагом выше и попадёт в deploy из store.
+  && pnpm --filter @spectaxi/api deploy --prod --ignore-scripts /out
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
