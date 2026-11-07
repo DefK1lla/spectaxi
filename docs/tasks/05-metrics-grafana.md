@@ -15,6 +15,13 @@
 
 ## Что сделать
 
+### Код / локально
+
+- [x] Эндпоинт `/api/v1/metrics` + `prom-client` / `spectaxi_api_up` в репо
+- [x] `METRICS_TOKEN` в локальном `.env` / `.env.example` (для curl на `localhost`)
+
+### Стенд + Grafana Cloud
+
 - [ ] Сгенерировать длинный случайный `METRICS_TOKEN`, положить в env API на DADA
 - [ ] Проверить вручную:
   ```bash

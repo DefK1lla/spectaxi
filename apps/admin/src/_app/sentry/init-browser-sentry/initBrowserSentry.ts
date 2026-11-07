@@ -1,5 +1,5 @@
 /**
- * Optional browser Sentry. No-op without NEXT_PUBLIC_SENTRY_DSN.
+ * Опциональный Sentry в браузере. Без NEXT_PUBLIC_SENTRY_DSN — no-op.
  */
 export async function initBrowserSentry(): Promise<void> {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();

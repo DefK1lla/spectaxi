@@ -9,6 +9,14 @@
 
 ## Что сделать
 
-- [ ] Создать БД, скопировать connection string (`sslmode=require` если нужно)
-- [ ] Прописать `DATABASE_URL` в env API на DADA (и локально в `.env` при необходимости)
-- [ ] Позже: раскомментировать `PrismaModule` + `$connect` (см. `apps/api/README.md`)
+### Локальная разработка (Neon)
+
+- [x] Создать project на [Neon](https://neon.tech), скопировать connection string (`sslmode=require`)
+- [x] Прописать `DATABASE_URL` в корневой `.env` и `apps/api/.env` (gitignored)
+
+### Стенд / Prisma
+
+- [ ] Прописать `DATABASE_URL` в env API на DADA (когда будет деплой)
+- [ ] Раскомментировать `PrismaModule` + `$connect` + проверку в `/ready` (см. `apps/api/README.md`)
+
+Пока Prisma выключена — Nest стартует и без URL; для migrate/studio URL уже нужен.

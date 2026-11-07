@@ -4,6 +4,12 @@
 
 Корневой обзор: [README.md](../README.md) (тот же vault — корень репо).
 
+Внешние зависимости API — порты + адаптеры (не вендор в домене): [TECH_STACK.md](./TECH_STACK.md) § «Порты и адаптеры», [BACKEND_STRUCTURE.md](./BACKEND_STRUCTURE.md) § «Порты». Образец в коде: `ObjectStorage` / S3 (`S3_*`).
+
+Дизайн-токены фронтов: [`@spectaxi/theme`](../packages/theme) — [FRONTEND_FSD.md](./FRONTEND_FSD.md) § «Тема» (CSS vars / native theme; UI-kit выбирается в apps).
+
+Язык в коде (комментарии и `describe`/`it` — русский; идентификаторы — English): [NAMING.md](./NAMING.md) § «Язык в коде».
+
 ## Obsidian vault
 
 1. Открыть **корень** `spectaxi` как vault (не `docs/`).

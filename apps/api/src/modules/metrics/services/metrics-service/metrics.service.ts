@@ -2,8 +2,8 @@ import { Injectable, OnModuleInit } from "@nestjs/common";
 import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
 
 /**
- * Prometheus registry (isolated per service instance — safe for tests).
- * Default Node metrics + spectaxi_api_up.
+ * Prometheus registry (изолированный на инстанс сервиса — удобно в тестах).
+ * Стандартные Node metrics + gauge spectaxi_api_up.
  */
 @Injectable()
 export class MetricsService implements OnModuleInit {

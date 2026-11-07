@@ -1,9 +1,9 @@
 import type { INestApplication } from "@nestjs/common";
 
 /**
- * CORS for browser clients (Vercel admin/web, local Next).
- * CORS_ORIGINS=comma-separated list, or `*` for reflect-any (dev only).
- * Empty → localhost:3001 and :3002 (admin/web defaults).
+ * CORS для браузерных клиентов (Vercel admin/web, локальный Next).
+ * CORS_ORIGINS — список через запятую, или `*` (reflect any, только dev).
+ * Пусто → localhost:3001 и :3002 (дефолты admin/web).
  */
 export function enableCors(app: INestApplication): void {
   const raw = process.env.CORS_ORIGINS?.trim();

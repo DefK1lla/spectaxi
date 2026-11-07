@@ -93,7 +93,32 @@ _app/providers/
 | Доменная модель с UI/api нескольких экранов    | `entities/<slice>/` |
 | UI-kit, http-клиент, утилиты без бизнес-правил | `shared/...`        |
 | Провайдеры, тема, глобальные стили             | `_app/`             |
+| Дизайн-токены (все фронты)                     | `@spectaxi/theme`   |
 
 Подробности и деревья решений — в скилле `feature-sliced-design` и на [fsd.how](https://fsd.how).
+
+## Тема (`@spectaxi/theme`)
+
+Общий пакет токенов для **admin, web и mobile**. Не содержит React-компонентов и не зависит от конкретной UI-библиотеки.
+
+```text
+packages/theme/
+  brandColor + primitiveColor   ← green brand scale, тёплые stone, status
+  themes/light | themes/dark    ← семантические роли
+  themesToCssDocument           ← веб light+dark (`data-theme`)
+  themeToNative / nativeThemes  ← Expo / RN
+```
+
+Направление: тёплый рабочий UI, soft radius, airy type; light = серый canvas + белые поверхности; brand green `#22C76E` (dark CTA `#34E089`).
+
+Полная шкала `brandColor` (50…900) и нейтрали `primitiveColor` — **только в коде** [`packages/theme/src/primitive-tokens.ts`](../packages/theme/src/primitive-tokens.ts); в markdown hex не дублируем, чтобы не расходились с пакетом.
+
+Правила:
+
+1. **Источник правды** — `@spectaxi/theme`. Цвета/отступы в apps не хардкодить мимо семантических ролей.
+2. **Веб** (`admin` / `web`): `themesToCssDocument()` в global CSS / `_app`; переключение `document.documentElement.dataset.theme = "dark" | "light"`. Либо map через `themeToTailwindColors`.
+3. **Mobile**: `nativeThemes.light | .dark` / `themeToNative(themes.dark)` → StyleSheet / ThemeProvider / NativeWind theme.
+4. **Не** делать `packages/ui` с общими Button для Next+Expo на старте — разный рендер. Локальный `shared/ui` в каждом app; визуал из одних токенов.
+5. UI-библиотеки подключаем, когда пишем первые экраны; light/dark токены уже есть.
 
 Cursor rules: `.cursor/rules/frontend-fsd.mdc`, `.cursor/rules/naming.mdc`.

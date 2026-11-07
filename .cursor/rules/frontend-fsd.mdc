@@ -19,6 +19,13 @@ Follow Feature-Sliced Design v2.1 (skill: `feature-sliced-design`, doc: `docs/FR
 
 See `docs/NAMING.md`. React component files: **PascalCase** (`HomePage.tsx`).
 
+## Theme
+
+- Visual tokens live in `@spectaxi/theme` (not in each app’s hardcoded hex).
+- Web: `themeToCssRoot` / `themeToTailwindColors`. Native: `themeToNative`.
+- Do not put cross-platform Button/Input in a shared package yet — tokens only; UI kits stay per app.
+- Doc: `docs/FRONTEND_FSD.md` § «Тема».
+
 ## Colocation (обязательно)
 
 - One component / function / hook / model = one kebab-case folder.

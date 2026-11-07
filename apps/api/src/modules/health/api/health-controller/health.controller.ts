@@ -15,7 +15,7 @@ export class HealthController {
 
   /** Liveness: процесс жив. Зависимости не проверяем. */
   @Get("health")
-  @ApiOperation({ summary: "Liveness probe" })
+  @ApiOperation({ summary: "Liveness: процесс жив" })
   getHealth(): HealthResponse {
     return healthResponseSchema.parse({ status: "ok" });
   }
@@ -27,7 +27,9 @@ export class HealthController {
    * См. docs/tasks/11-migrations-deploy.md и 04-database-url.md.
    */
   @Get("ready")
-  @ApiOperation({ summary: "Readiness probe (DB check after Prisma on)" })
+  @ApiOperation({
+    summary: "Readiness: зависимости (после включения Prisma — проверка БД)",
+  })
   getReady(): ReadyResponse {
     // try {
     //   await this.prisma.$queryRaw`SELECT 1`;
