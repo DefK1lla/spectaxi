@@ -35,6 +35,15 @@ pnpm dev
 Структура модулей: [BACKEND_STRUCTURE.md](../../docs/BACKEND_STRUCTURE.md)  
 (логика в домене; `/admin/*` — только HTTP-поверхность, не склад бизнес-правил).
 
+## Object storage (порт + адаптер)
+
+Домены зависят только от порта `ObjectStorage` (`@Inject(OBJECT_STORAGE)`): `putObject`, `getSignedGetUrl`.  
+Текущий адаптер — S3-compatible (`S3ObjectStorageAdapter`: Neon / R2 / Selectel / Yandex / …). Смена вендора = новый адаптер + bind в `StorageModule`, без правок доменов.
+
+Env для текущего адаптера: `S3_ENDPOINT`, `S3_KEY`, `S3_SECRET`, `S3_BUCKET` (+ `S3_REGION`, `S3_FORCE_PATH_STYLE=true`). Сеть на старте не дергается.
+
+Остальные внешние зависимости (OTP, платежи, geo, push, scheduler) — тот же паттерн; каталог и «когда писать код» — [`TECH_STACK.md`](../../docs/TECH_STACK.md) § «Порты и адаптеры», пустые порты заранее не заводим.
+
 Docker: `docker compose up --build` из корня (API + Postgres). Деплой DADA/Vercel: [DEPLOY_HELLO.md](../../docs/DEPLOY_HELLO.md).
 
 ## База данных (Neon)

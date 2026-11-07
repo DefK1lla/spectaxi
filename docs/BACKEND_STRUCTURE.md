@@ -11,6 +11,7 @@ apps/api/src/
   main.ts
   app.module.ts
   prisma/                 ← инфраструктура БД (не домен)
+  storage/                ← ObjectStorage port + adapters (не домен)
   common/                 ← guards, pipes, filters, decorators (по мере нужды)
   modules/
     health/
@@ -28,6 +29,54 @@ apps/api/src/
 ```
 
 Пустые доменные модули «на вырост» не создаём.
+
+### Object storage (`src/storage/`)
+
+Инфраструктура файлов, **не** доменный модуль. Домены не знают про S3/AWS SDK.
+
+```text
+storage/
+  index.ts                          ← публичный API: StorageModule, OBJECT_STORAGE, ObjectStorage
+  object-storage.port.ts            ← порт + токен DI
+  load-object-storage-config.ts     ← чтение S3_* для текущего адаптера
+  storage.module.ts                 ← Global; bind OBJECT_STORAGE → адаптер
+  providers/
+    s3-object-storage-adapter/
+      s3-object-storage.adapter.ts  ← Neon / R2 / РФ S3 (S3 API)
+      s3-object-storage.adapter.spec.ts
+```
+
+Использование в домене:
+
+```typescript
+constructor(
+  @Inject(OBJECT_STORAGE) private readonly objectStorage: ObjectStorage,
+) {}
+```
+
+Смена вендора: новый класс-адаптер + `useClass` в `StorageModule` (и/или новые env). Подробности потока загрузки — `TECH_STACK.md` § «Файлы».
+
+### Порты внешних зависимостей
+
+Источник правды по смыслу и срокам: [`TECH_STACK.md`](./TECH_STACK.md) § «Порты и адаптеры».
+
+| Порт                            | Где жить (ориентир)                                          | Статус                            |
+| ------------------------------- | ------------------------------------------------------------ | --------------------------------- |
+| `ObjectStorage`                 | `src/storage/` (инфра)                                       | Каркас есть                       |
+| `OtpSender` (+ покрытие номера) | `modules/auth/providers/`                                    | Документ; код с фичей входа       |
+| `PaymentProvider`               | `modules/payments/providers/` (или рядом с доменом payments) | Документ; код с ЮKassa            |
+| `GeoFilter`                     | домен поиска / `providers/`                                  | Документ; код с поиском           |
+| `AddressDirectory`              | geo-домен / `providers/`                                     | Документ; код с suggest           |
+| `PushNotifier`                  | notifications / `providers/`                                 | Документ; код с пушами            |
+| `JobScheduler`                  | инфра или `common/` + адаптер pg-boss                        | Документ; код с таймерами заказов |
+| `ImageOptimizer`                | рядом с upload / `storage`                                   | По желанию, с загрузкой фото      |
+
+Правила:
+
+1. Домен инжектит **токен порта**, не класс адаптера и не npm SDK вендора.
+2. Адаптер = одна папка-юнит в `providers/` (или инфра вроде `storage/`), со спекой.
+3. **Не** создавать пустой порт без вызывающего кода. Первый адаптер — в том же PR/задаче, что первая фича.
+4. Несколько реализаций одного порта (OTP: Telegram + SMS; Geo: PostGIS + haversine) — отдельные адаптеры + композиция/выбор в одном месте (фабрика или оркестратор), не `if (vendor)` по всему домену.
 
 Пример разросшегося домена (`orders`):
 
@@ -66,9 +115,10 @@ modules/orders/
    - Исключение: крошечный домен с одним файлом можно держать плоско, пока не появится второй юнит — при росте сразу в папки.
 3. **Импорты между доменами** — через публичные сервисы модуля (`exports`), не через внутренние файлы чужого модуля.
 4. **Prisma** — общий `PrismaModule` / `PrismaService`; запросы живут в доменных `services/`.
-5. **`common/`** — только кросс-доменный каркас, без бизнес-правил заказа/оплаты.
-6. **Контракты** — по возможности `@spectaxi/contracts`.
-7. **Логика в домен, админка — поверхность API** (обязательно):
+5. **Внешние зависимости** — через порты (`ObjectStorage`, OTP, платежи, geo, push, scheduler…); см. § «Порты» выше и `TECH_STACK.md`. Домены не импортируют адаптеры и вендорские SDK.
+6. **`common/`** — только кросс-доменный каркас, без бизнес-правил заказа/оплаты.
+7. **Контракты** — по возможности `@spectaxi/contracts`.
+8. **Логика в домен, админка — поверхность API** (обязательно):
    - Бизнес-логика только в доменном модуле.
    - `AdminModule` — не склад логики споров/лицензий/заказов.
    - Админ-HTTP: `*-admin-controller/` внутри домена (предпочтительно) или тонкий controller в `AdminModule`, вызывающий exported service.

@@ -4,6 +4,8 @@
 
 Корневой обзор: [README.md](../README.md) (тот же vault — корень репо).
 
+Внешние зависимости API — порты + адаптеры (не вендор в домене): [TECH_STACK.md](./TECH_STACK.md) § «Порты и адаптеры», [BACKEND_STRUCTURE.md](./BACKEND_STRUCTURE.md) § «Порты». Образец в коде: `ObjectStorage` / S3 (`S3_*`).
+
 ## Obsidian vault
 
 1. Открыть **корень** `spectaxi` как vault (не `docs/`).

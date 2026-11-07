@@ -40,3 +40,16 @@ modules/orders/
 // ❌ BAD — логика в AdminModule
 // ✅ GOOD — OrdersService + api/orders-admin-controller/
 ```
+
+## Порты / адаптеры (внешние зависимости)
+
+- Вендорский SDK не в доменных сервисах — только порт (интерфейс + DI-токен) + адаптер.
+- Каталог и «когда писать»: `docs/TECH_STACK.md` § «Порты и адаптеры»; размещение — `docs/BACKEND_STRUCTURE.md` § «Порты».
+- Не заводить пустой порт без фичи. Образец в коде: `OBJECT_STORAGE` / `S3ObjectStorageAdapter`.
+- OTP, Payment, GeoFilter, AddressDirectory, Push, JobScheduler — по мере фич, не заранее.
+
+## Object storage (инфра, не домен)
+
+- Файлы через порт `OBJECT_STORAGE` / `ObjectStorage` (`apps/api/src/storage`).
+- Домены: `@Inject(OBJECT_STORAGE)`, без `@aws-sdk/*` и без импорта адаптеров.
+- S3-compatible детали — только в `S3ObjectStorageAdapter` + bind в `StorageModule`.

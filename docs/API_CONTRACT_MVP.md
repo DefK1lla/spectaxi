@@ -15,7 +15,8 @@
 - `GET /api/v1/admin/health` — заглушка админ-модуля (тот же Nest-процесс); без авторизации на скелете, позже — admin JWT;
 - `GET /api/v1/metrics` — метрики в формате Prometheus, только с заголовком `Authorization: Bearer <METRICS_TOKEN>`; без персональных данных (`TECH_STACK.md`, раздел «Мониторинг»).
 
-Структура Nest-модулей: `BACKEND_STRUCTURE.md`.
+Структура Nest-модулей: `BACKEND_STRUCTURE.md`.  
+Загрузка файлов (`multipart`): клиент шлёт байты, не URL; API пишет через порт `ObjectStorage` (`TECH_STACK.md` § «Файлы»).
 
 Пример единого формата ошибки:
 
