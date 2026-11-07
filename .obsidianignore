@@ -1,0 +1,8 @@
+# Hide everything in the monorepo vault except docs + root README.
+*
+!README.md
+!docs/
+!docs/**
+!.obsidianignore
+!.obsidian/
+!.obsidian/**

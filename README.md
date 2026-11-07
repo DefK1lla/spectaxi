@@ -4,7 +4,7 @@
 
 Продуктовые документы MVP — в [`docs/`](docs/). Скелет monorepo: `@spectaxi/api`, `@spectaxi/admin`, `@spectaxi/web`, `@spectaxi/mobile`, `@spectaxi/contracts`.
 
-**Obsidian:** открыть **корень репозитория** как vault (`File → Open folder as vault`). Shared-конфиг в [`.obsidian/`](.obsidian/): в графе видны этот README и [`docs/`](docs/), код/`node_modules` исключены. Подробнее — [`docs/README.md`](docs/README.md).
+**Obsidian:** открыть **корень** репо как vault. Фильтры в [`.obsidian/`](.obsidian/) + [`.obsidianignore`](.obsidianignore). Если в проводнике всё ещё виден код — поставь community-плагин **Ignore** (см. [`docs/README.md`](docs/README.md)).
 
 DX: `pnpm lint` · `pnpm format` · `pnpm syncpack:check` · husky + lint-staged на commit. Деплой hello: [`docs/DEPLOY_HELLO.md`](docs/DEPLOY_HELLO.md).
 

@@ -16,8 +16,9 @@ Thumbs.db
 apps/mobile/ios
 apps/mobile/android
 
-# Obsidian: shared .obsidian/* is committed; personal UI state is not
+# Obsidian: shared .obsidian/* is committed; personal UI state / local plugins are not
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/cache
+.obsidian/plugins/
 docs/.obsidian/
