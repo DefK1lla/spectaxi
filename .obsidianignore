@@ -1,8 +1,13 @@
 # Hide everything in the monorepo vault except docs + root README.
-*
+# Use /* (not *) so root folders like node_modules/ are ignored too.
+/*
 !README.md
 !docs/
 !docs/**
 !.obsidianignore
 !.obsidian/
 !.obsidian/**
+
+# Explicit (nested copies too)
+node_modules/
+**/node_modules/
