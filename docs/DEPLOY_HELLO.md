@@ -27,7 +27,7 @@
 5. Проверки: `/health`, `/ready`, `/metrics` с Bearer.
 6. Grafana scrape ([tasks/05-metrics-grafana.md](./tasks/05-metrics-grafana.md)).
 7. UptimeRobot на `/ready` ([tasks/07-uptime-robot.md](./tasks/07-uptime-robot.md)).
-8. Миграции — когда включите Prisma ([tasks/11-migrations-deploy.md](./tasks/11-migrations-deploy.md)).
+8. Миграции на стенд (`prisma migrate deploy`) — [tasks/11-migrations-deploy.md](./tasks/11-migrations-deploy.md). Локально Prisma уже включена.
 
 CI уже собирает образ: [tasks/10-ci-docker.md](./tasks/10-ci-docker.md).
 

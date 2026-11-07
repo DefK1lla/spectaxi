@@ -1,0 +1,35 @@
+---
+description: Before/after changes — check docs+rules; ask if unclear; update docs when needed
+alwaysApply: true
+---
+
+# Docs & rules gate
+
+Before **and** after substantive code or config changes, treat as source of truth:
+
+- `docs/**` (including **`docs/tasks/**`** — task files + `docs/tasks/README.md` status)
+- `.cursor/rules/**`
+- relevant package/app `README.md`
+
+## Before changing
+
+1. Find and read the relevant docs, **task files**, and rules (stack, FSD, API, naming, open checklists in `docs/tasks/`).
+2. Align the plan with what is already written (including task status: done / open / blocked).
+3. **Stop and ask the user** if any of these apply:
+   - the topic is missing, vague, or contradictory in docs/tasks/rules;
+   - the change could surprise (new dependency, new package, host/env, public API, data model, share strategy, UI kit split, secrets/CI);
+   - behavior after the change is ambiguous or risky (runtime without env, deploy, migrations, breaking contracts).
+4. Do **not** invent product/infra decisions that docs/tasks leave open (e.g. share strategy TBD, host not chosen yet) — ask first.
+
+## After changing
+
+1. Re-check the same docs, **task files**, and rules against what you actually shipped.
+2. If status, wording, or checklists are stale — **update them in the same work**:
+   - `docs/tasks/<n>-*.md` checkboxes and prose
+   - `docs/tasks/README.md` status column
+   - TECH_STACK / FRONTEND_* / package READMEs / Cursor rules as needed
+3. Prefer fixing docs/tasks over leaving “we’ll update later” when the change made them wrong.
+
+## Scope
+
+Applies to features, refactors, deps, CI/Docker, Prisma/env, and frontend kit decisions. Trivial typos/formatting-only edits do not require a full docs pass.
