@@ -15,3 +15,9 @@ Thumbs.db
 *.tsbuildinfo
 apps/mobile/ios
 apps/mobile/android
+
+# Obsidian: shared .obsidian/* is committed; personal UI state is not
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+docs/.obsidian/

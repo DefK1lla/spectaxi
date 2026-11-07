@@ -1,0 +1,30 @@
+{
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "docs",
+  "attachmentFolderPath": "docs/attachments",
+  "showLineNumber": true,
+  "strictLineBreaks": false,
+  "readableLineLength": true,
+  "defaultViewMode": "preview",
+  "promptDelete": true,
+  "trashOption": "local",
+  "userIgnoreFilters": [
+    "apps/",
+    "packages/",
+    "node_modules/",
+    ".git/",
+    ".github/",
+    ".husky/",
+    ".cursor/",
+    ".agents/",
+    ".expo/",
+    ".next/",
+    ".turbo/",
+    "coverage/",
+    "dist/",
+    "build/",
+    "eslint/",
+    "docs/attachments/"
+  ]
+}

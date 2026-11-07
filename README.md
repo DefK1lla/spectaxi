@@ -4,7 +4,7 @@
 
 Продуктовые документы MVP — в [`docs/`](docs/). Скелет monorepo: `@spectaxi/api`, `@spectaxi/admin`, `@spectaxi/web`, `@spectaxi/mobile`, `@spectaxi/contracts`.
 
-Спеки удобно читать в Obsidian: открыть [`docs/`](docs/) как vault (см. [`docs/README.md`](docs/README.md)).
+**Obsidian:** открыть **корень репозитория** как vault (`File → Open folder as vault`). Shared-конфиг в [`.obsidian/`](.obsidian/): в графе видны этот README и [`docs/`](docs/), код/`node_modules` исключены. Подробнее — [`docs/README.md`](docs/README.md).
 
 DX: `pnpm lint` · `pnpm format` · `pnpm syncpack:check` · husky + lint-staged на commit. Деплой hello: [`docs/DEPLOY_HELLO.md`](docs/DEPLOY_HELLO.md).
 
