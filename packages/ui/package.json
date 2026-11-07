@@ -20,8 +20,8 @@
     "tamagui": "3.2.4"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-native": "*"
+    "react": "19.3.0",
+    "react-native": "0.88.1"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
