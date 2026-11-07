@@ -1,6 +1,6 @@
 # Задача: DATABASE_URL
 
-**Зачем:** Prisma/ready смогут проверять БД; без URL Nest сейчас стартует (PrismaModule выключен), но прод-ready без базы бессмысленен.
+**Зачем:** Prisma/ready проверяют БД; без URL Nest не сможет `$connect`.
 
 ## Варианты
 
@@ -13,10 +13,8 @@
 
 - [x] Создать project на [Neon](https://neon.tech), скопировать connection string (`sslmode=require`)
 - [x] Прописать `DATABASE_URL` в корневой `.env` и `apps/api/.env` (gitignored)
+- [x] Включить `PrismaModule` + `$connect` + проверку в `/ready`
 
-### Стенд / Prisma
+### Стенд
 
 - [ ] Прописать `DATABASE_URL` в env API на DADA (когда будет деплой)
-- [ ] Раскомментировать `PrismaModule` + `$connect` + проверку в `/ready` (см. `apps/api/README.md`)
-
-Пока Prisma выключена — Nest стартует и без URL; для migrate/studio URL уже нужен.

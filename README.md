@@ -38,7 +38,7 @@ cp apps/api/.env.example apps/api/.env         # Windows: copy apps\api\.env.exa
 
 Секреты и локальные `.env` в git не коммитить.
 
-**База для разработки:** [Neon](https://neon.com) (облачный Postgres по `DATABASE_URL`). Локальный Postgres / Docker не обязательны. Подключение Prisma в API пока выключено — без URL ничего не падает. Как создать проект Neon и что будет на проде — [`docs/TECH_STACK.md`](docs/TECH_STACK.md) §2 и [`apps/api/README.md`](apps/api/README.md).
+**База для разработки:** [Neon](https://neon.com) (облачный Postgres по `DATABASE_URL`). Локальный Postgres / Docker не обязательны. Prisma в API **включена** — нужен `DATABASE_URL` в `.env` / `apps/api/.env`; `/api/v1/ready` проверяет БД. Как создать проект Neon и что будет на проде — [`docs/TECH_STACK.md`](docs/TECH_STACK.md) §2 и [`apps/api/README.md`](apps/api/README.md).
 
 **Файлы (фото/документы):** порт `ObjectStorage` в API + S3-compatible адаптер. В `.env` — `S3_*` (сейчас Neon Object Storage; позже R2 / российский S3 без правок доменов).
 

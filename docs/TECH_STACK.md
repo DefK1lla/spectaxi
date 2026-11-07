@@ -298,7 +298,7 @@ Sentry ловит ошибки, логи смотрим в консоли пла
 
 1. Каркас репозитория
    1a. **Сделано:** monorepo pnpm (`@spectaxi/api`, `admin`, `web`, `mobile`, `contracts`, `theme`, `ui`), `pnpm dev:*` / `lint` / `typecheck` / `test`, Vitest + coverage, CI GitHub Actions, `.env.example`, `eas.json`, Nest `/api/v1`, hello Next + Expo. `@spectaxi/theme` — токены; клиент `@spectaxi/ui` — **Tamagui**; admin — **Mantine**; compiler Tamagui — task 13.
-   1b. **Частично:** Prisma 7.10 в `apps/api` (`prisma.config.ts`, схема-заглушка без `url`, `PrismaPg` adapter; `PrismaModule` и `$connect` закомментированы — API стартует без Neon). Дальше: свой `DATABASE_URL` из Neon → раскомментировать модуль → миграции по `DOMAIN_MODEL_AND_ERD.md` → `/api/v1/ready` проверяет БД.
+   1b. **Сделано (локально):** Prisma 7.10 в `apps/api` (`PrismaModule`, `$connect`, `/ready` → `SELECT 1`, миграция `skeleton_meta` на Neon). Дальше: модели из `DOMAIN_MODEL_AND_ERD.md`, `migrate deploy` на стенд.
    1c. **Сделано (каркас):** `StorageModule` + порт `ObjectStorage` + `S3ObjectStorageAdapter`; env `S3_*` (Neon Object Storage в local/dev). Загрузки доменов ещё нет — вызовы появятся с парком/лицензиями.
    1d. Деплой «hello» — [`DEPLOY_HELLO.md`](DEPLOY_HELLO.md) + [`tasks/`](tasks/README.md). В API: `prom-client` `/metrics` + `METRICS_TOKEN`, CORS (`CORS_ORIGINS`), Sentry (`SENTRY_DSN` + filter), OpenAPI (`ENABLE_OPENAPI`); CI job `docker-api`; UptimeRobot на `/ready`.
 2. Вход по телефону (dev-код), профиль, режимы, вход в админку.

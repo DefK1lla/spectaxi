@@ -2,7 +2,7 @@
 
 NestJS API SpexTaxi. Префикс маршрутов: `/api/v1`.
 
-Сейчас скелет без бизнес-логики. **Prisma ORM 7.10** подготовлена под Neon/PostgreSQL (`prisma.config.ts`, `@prisma/adapter-pg`), но **подключение к БД выключено** (модуль и `$connect` закомментированы) — `pnpm dev:api` стартует без `DATABASE_URL`.
+Сейчас скелет без бизнес-логики. **Prisma ORM 7.10** подключена к Neon/PostgreSQL (`prisma.config.ts`, `@prisma/adapter-pg`, `PrismaModule` + `$connect`). Нужен `DATABASE_URL` в `apps/api/.env` (или корневом `.env`). `/api/v1/ready` проверяет БД через `SELECT 1`.
 
 ## Запуск
 
@@ -60,12 +60,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require
 
 Примеры переменных: `.env.example` в корне и `apps/api/.env.example`.
 
-Когда будешь готов подключить Nest к БД:
-
-1. Раскомментируй `PrismaModule` в `src/app.module.ts`.
-2. Раскомментируй `$connect` / `$disconnect` в `src/prisma/prisma.service.ts`.
-3. Раскомментируй проверку в `GET /ready` (`src/modules/health/api/health-controller/health.controller.ts`).
-4. Примени схему:
+Prisma включена. После смены схемы:
 
 ```bash
 pnpm prisma:migrate
