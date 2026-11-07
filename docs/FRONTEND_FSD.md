@@ -39,6 +39,8 @@ apps/mobile/src/
   shared/ | features/ | entities/  ← по мере нужды
 ```
 
+**Сейчас** клиентский продукт (экраны/фичи MVP) пишем здесь. Вынос в shared packages кроме `contracts` / `theme` / `ui` — после выбора стратегии ([`FRONTEND_SHARE_OPTIONS.md`](./FRONTEND_SHARE_OPTIONS.md), task 14).
+
 Alias `@/*` → `src/*` во всех трёх приложениях.
 
 ## Именование
@@ -86,18 +88,52 @@ _app/providers/
 
 ## Где что класть (кратко)
 
-| Что                                            | Куда                |
-| ---------------------------------------------- | ------------------- |
-| Экран / логика одного маршрута                 | `_pages/<slice>/`   |
-| Переиспользуемое действие пользователя         | `features/<slice>/` |
-| Доменная модель с UI/api нескольких экранов    | `entities/<slice>/` |
-| UI-kit, http-клиент, утилиты без бизнес-правил | `shared/...`        |
-| Провайдеры, тема, глобальные стили             | `_app/`             |
-| Дизайн-токены (все фронты)                     | `@spectaxi/theme`   |
+| Что                                            | Куда                                  |
+| ---------------------------------------------- | ------------------------------------- |
+| Экран / логика одного маршрута                 | `_pages/<slice>/`                     |
+| Переиспользуемое действие пользователя         | `features/<slice>/`                   |
+| Доменная модель с UI/api нескольких экранов    | `entities/<slice>/`                   |
+| UI-kit, http-клиент, утилиты без бизнес-правил | app `shared/...` и/или `@spectaxi/ui` |
+| Провайдеры, тема, глобальные стили             | `_app/`                               |
+| Дизайн-токены (все фронты)                     | `@spectaxi/theme`                     |
+| UI-примитивы (Tamagui)                         | `@spectaxi/ui`                        |
 
 Подробности и деревья решений — в скилле `feature-sliced-design` и на [fsd.how](https://fsd.how).
 
-## Тема (`@spectaxi/theme`)
+## UI-kit (Tamagui)
+
+Цель: стилистика SpexTaxi (зелёный brand, тёплый stone, soft radius) и **паритет `web` ↔ `mobile` на телефоне**.
+
+| Решение    | Деталь                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| Библиотека | **Tamagui** на всех трёх apps (актуальная линейка, Next + Expo)                                  |
+| Токены     | `@spectaxi/theme` → Tamagui config / CSS vars                                                    |
+| Пакет      | `packages/ui` (`@spectaxi/ui`) — `SpectaxiUiProvider` (`TamaguiProvider`) + re-export primitives |
+| Не берём   | **gluestack-ui**: v5 dropped Next; v4 — legacy/alpha                                             |
+
+### Паритет web ↔ mobile (телефон)
+
+На ширине телефона `apps/web` и `apps/mobile` должны выглядеть **одинаково**: те же элементы, на тех же местах, та же иерархия. Не «похожий бренд», а совпадение layout’а клиентских экранов.
+
+- **`apps/web` — mobile first + адаптив.** Телефонная версия — **важнее и эталонна** (паритет с `mobile`). На десктопе/планшете layout **расширяется** и должен выглядеть нормально (не «узкая колонка как на телефоне» и не отдельный продукт с другой IA) — progressive enhancement от phone-layout.
+- **`apps/mobile` — эталон композиции** для клиентских сценариев на phone viewport; web на этой ширине не меняет порядок/набор блоков относительно mobile.
+- Общий kit (Tamagui в `@spectaxi/ui`) + одни токены — обязательны, чтобы паритет не разъезжался.
+
+### Админка (`apps/admin`)
+
+Админка — **desktop-first рабочий инструмент**. Адаптивом под телефон / «красивым mobile UX» **не занимаемся**: фиксированная/широкая раскладка под монитор нормальна. Достаточно, чтобы не ломалась совсем узкая ширина (горизонтальный скролл / читаемость ок); отдельные mobile breakpoints и перестройки layout — не цель.
+
+Правила UI-kit:
+
+1. Новые экраны собирают UI из `@spectaxi/ui` (Tamagui), не из случайных npm UI-kit.
+2. Не хардкодить hex — семантика из `@spectaxi/theme` / Tamagui themes.
+3. Mantine / Paper / gluestack / отдельные web-only kit **не** подключаем.
+4. Локальный `shared/ui` в app — только обёртки над `@spectaxi/ui` или одноразовые куски экрана.
+5. Клиентские экраны web/mobile: паритет на phone viewport; admin — не требовать mobile layout.
+6. **UI-копирайт — только русский** (см. [`NAMING.md`](./NAMING.md)).
+7. MVP: заказы — в **`mobile`**; `web` — лендинг / веб-клиент позже, **не** Expo Web.
+
+## Тема и бренд (`@spectaxi/theme`)
 
 Общий пакет токенов для **admin, web и mobile**. Не содержит React-компонентов и не зависит от конкретной UI-библиотеки.
 
@@ -109,16 +145,24 @@ packages/theme/
   themeToNative / nativeThemes  ← Expo / RN
 ```
 
-Направление: тёплый рабочий UI, soft radius, airy type; light = серый canvas + белые поверхности; brand green `#22C76E` (dark CTA `#34E089`).
-
-Полная шкала `brandColor` (50…900) и нейтрали `primitiveColor` — **только в коде** [`packages/theme/src/primitive-tokens.ts`](../packages/theme/src/primitive-tokens.ts); в markdown hex не дублируем, чтобы не расходились с пакетом.
+**Бренд (не проебать):** тёплый рабочий UI, soft radius, airy type; light = серый canvas + белые поверхности; brand green CTA `#22C76E` (dark CTA `#34E089`). Не уезжать в «дефолтный AI-UI» (фиолетовые градиенты, холодный slate-only, резкие карточные дашборды) без продуктового решения. Hex-шкалы — только в коде [`packages/theme/src/primitive-tokens.ts`](../packages/theme/src/primitive-tokens.ts); в markdown не дублировать полную палитру.
 
 Правила:
 
 1. **Источник правды** — `@spectaxi/theme`. Цвета/отступы в apps не хардкодить мимо семантических ролей.
-2. **Веб** (`admin` / `web`): `themesToCssDocument()` в global CSS / `_app`; переключение `document.documentElement.dataset.theme = "dark" | "light"`. Либо map через `themeToTailwindColors`.
-3. **Mobile**: `nativeThemes.light | .dark` / `themeToNative(themes.dark)` → StyleSheet / ThemeProvider / NativeWind theme.
-4. **Не** делать `packages/ui` с общими Button для Next+Expo на старте — разный рендер. Локальный `shared/ui` в каждом app; визуал из одних токенов.
-5. UI-библиотеки подключаем, когда пишем первые экраны; light/dark токены уже есть.
+2. **Веб** (`admin` / `web`): CSS из `@spectaxi/ui/styles.css` (`themesToCssDocument`); переключение `document.documentElement.dataset.theme = "dark" | "light"`. Либо map через `themeToTailwindColors`.
+3. **Mobile**: `nativeThemes.light | .dark` / `themeToNative` → StyleSheet / Tamagui themes (маппинг токенов — task 13).
+4. UI-компоненты — только через `@spectaxi/ui` (Tamagui); локальный `shared/ui` — обёртки или одноразовые куски.
+5. Доводка compiler/Metro/Next — [`tasks/13-tamagui-ui.md`](./tasks/13-tamagui-ui.md).
+
+## Общий код web ↔ mobile
+
+**Сейчас:** клиентский продукт пишем в **`apps/mobile`**. Стратегия шаринга с `web` (Solito `packages/app`, отдельный `client`, только logic-only и т.д.) — **открытый вопрос**.
+
+Варианты структур и ссылки на стартеры: [`FRONTEND_SHARE_OPTIONS.md`](./FRONTEND_SHARE_OPTIONS.md). Когда решение принято — зафиксировать здесь и пометить тот файл «решено».
+
+Уже общие (не отменять): `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui`. API-zod — только в `contracts`. Не плодить микропакеты на каждый хелпер. Публичный веб — Next (`apps/web`), не Expo Web. Admin — отдельно, desktop-first.
+
+Паритет на телефоне и mobile-first web — см. § «UI-kit»; к выносу экранов/фич в packages не обязывает, пока шаринг не выбран.
 
 Cursor rules: `.cursor/rules/frontend-fsd.mdc`, `.cursor/rules/naming.mdc`.

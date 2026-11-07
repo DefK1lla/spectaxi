@@ -2,7 +2,7 @@
 
 Мобильный маркетплейс спецтехники. Один аккаунт — клиент и/или исполнитель. Вход по телефону, режим интерфейса (`current_mode`) выбирается при регистрации.
 
-Продуктовые документы MVP — в [`docs/`](docs/). Скелет monorepo: `@spectaxi/api`, `@spectaxi/admin`, `@spectaxi/web`, `@spectaxi/mobile`, `@spectaxi/contracts`.
+Продуктовые документы MVP — в [`docs/`](docs/). Скелет monorepo: `@spectaxi/api`, `@spectaxi/admin`, `@spectaxi/web`, `@spectaxi/mobile`, `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui`.
 
 **Obsidian:** открыть **корень** репо как vault. Паттерны — [`.obsidianignore`](.obsidianignore). Чтобы не торчали пустые `node_modules` — плагин **Advanced Exclude** + **Hide empty folders** (см. [`docs/README.md`](docs/README.md)).
 
@@ -22,7 +22,9 @@ apps/api       NestJS API          → apps/api/README.md
 apps/admin     Next.js админка     → apps/admin/README.md
 apps/web       Next.js публичный веб → apps/web/README.md
 apps/mobile    Expo приложение     → apps/mobile/README.md
-packages/contracts   общие zod-схемы и типы
+packages/contracts   общие zod-схемы и типы API
+packages/theme       дизайн-токены
+packages/ui          Tamagui (каркас; compiler — task 13)
 docs/          продуктовые спецификации
 ```
 
@@ -42,7 +44,7 @@ cp apps/api/.env.example apps/api/.env         # Windows: copy apps\api\.env.exa
 
 **Порты внешних сервисов** (OTP, платежи, geo, push, scheduler…): правило и каталог в [`docs/TECH_STACK.md`](docs/TECH_STACK.md) § «Порты и адаптеры»; код адаптера — вместе с фичей, не заранее. Образец — storage. См. также [`docs/BACKEND_STRUCTURE.md`](docs/BACKEND_STRUCTURE.md), [`apps/api/README.md`](apps/api/README.md).
 
-**Тема UI:** [`packages/theme`](packages/theme) (`@spectaxi/theme`) — общие токены для admin/web/mobile; из них собирается CSS (веб) или native theme (Expo). UI-kit в apps подключается отдельно. [`docs/FRONTEND_FSD.md`](docs/FRONTEND_FSD.md) § «Тема».
+**Тема + UI:** [`packages/theme`](packages/theme) — токены; [`packages/ui`](packages/ui) — **Tamagui** ([`docs/tasks/13-tamagui-ui.md`](docs/tasks/13-tamagui-ui.md)). Клиент **пока в `apps/mobile`**; шаринг web — TBD (task 14). FSD: [`docs/FRONTEND_FSD.md`](docs/FRONTEND_FSD.md).
 
 ## Запуск (dev)
 

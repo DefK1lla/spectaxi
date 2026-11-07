@@ -2,7 +2,9 @@
 
 Expo (React Native) приложение SpexTaxi: клиент и исполнитель в одном приложении (`current_mode`).
 
-Сейчас скелет: Expo Router, один экран «SpexTaxi».
+**Сейчас здесь пишется клиентский продукт** (MVP-заказы и сценарии). Шаринг с `apps/web` — открытый вопрос: [`docs/FRONTEND_SHARE_OPTIONS.md`](../../docs/FRONTEND_SHARE_OPTIONS.md) / task 14.
+
+Скелет: Expo Router, один экран «SpexTaxi»; токены через `@spectaxi/theme` / `@spectaxi/ui`.
 
 Структура UI — **FSD v2.1**: роутинг Expo в `src/app/`, слои в `src/_app`, `src/_pages` (см. [`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)).
 

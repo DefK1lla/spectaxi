@@ -12,6 +12,7 @@ alwaysApply: true
 - Identifiers (types, functions, files, folders, API `error.code`) — **English**
 - Comments and JSDoc — **Russian**
 - Vitest `describe` / `it` / `test` titles — **Russian**
+- **UI copy** in admin / web / mobile (labels, buttons, errors, empty states) — **Russian only** for now (no English UI “for later”; i18n is a separate decision)
 - OK in English: third-party API quotes, product/brand names, ticket refs in TODO
 
 ## Identifiers

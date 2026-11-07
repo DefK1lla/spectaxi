@@ -1,5 +1,8 @@
+import { nativeLightTheme } from "@spectaxi/theme";
 import { StyleSheet, Text, View } from "react-native";
 import { APP_BRAND } from "../../model/brand";
+
+const theme = nativeLightTheme;
 
 export function HomeScreen() {
   return (
@@ -14,10 +17,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.color.bgCanvas,
+    padding: theme.space[6],
   },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
+    fontSize: theme.fontSize["2xl"],
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.color.brand,
+    fontFamily: theme.fontFamily.sans,
   },
 });
