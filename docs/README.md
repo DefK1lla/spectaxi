@@ -6,14 +6,19 @@
 
 ## Obsidian vault
 
-1. Открыть **корень** `spectaxi` как vault (не папку `docs/`).
-2. Полностью закрыть Obsidian и открыть снова после смены конфига.
-3. **Settings → Files and links:**
-   - **Detect all file extensions** — выключить (у нас `showUnsupportedFiles: false`).
-   - **Excluded files** — должны быть regex из `.obsidian/app.json`. Если список пустой — Obsidian сбросил конфиг: вставь фильтры из `app.json` → `userIgnoreFilters` вручную или поставь плагин ниже.
-4. Нативный exclude часто **всё равно оставляет папки** (`apps/`, …) в проводнике. Чтобы скрыть код надёжно:
+1. Открыть **корень** `spectaxi` как vault (не `docs/`).
+2. **Settings → Files and links → Detect all file extensions** — выключить.
 
-   **Community plugins → включить → Browse → плагин `Ignore` (devxoul) → Install → Enable.**  
-   В корне уже есть [`.obsidianignore`](../.obsidianignore): скрыто всё, кроме `README.md` и `docs/`.
+### Скрыть код в проводнике
 
-Личный `workspace.json` не коммитим.
+Плагин **Ignore** прячет файлы, но часто оставляет **пустые папки** (`node_modules` без содержимого). Для monorepo нужен:
+
+1. Community plugins → **Advanced Exclude** (Michael Naoumov) → Install → Enable.  
+   Плагин **Ignore** можно выключить, чтобы не дублировать правила.
+2. Settings → Advanced Exclude:
+   - источник паттернов — файл [`.obsidianignore`](../.obsidianignore) в корне (уже в репо);
+   - mode **Full** (или как минимум скрытие Files pane);
+   - включить **Hide empty folders** — иначе пустые `node_modules` / `apps` останутся в дереве.
+3. Reload vault (или Disable/Enable плагина).
+
+Личный `workspace.json` и установленные плагины в git не коммитим.
