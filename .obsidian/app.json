@@ -28,17 +28,6 @@
     "/^\\.turbo(\\/|$)/",
     "/^\\.next(\\/|$)/",
     "/^\\.expo(\\/|$)/",
-    "/.*\\.(ts|tsx|js|jsx|mjs|cjs|json|lock|yml|yaml|toml|css|scss|map|svg|png|jpg|ico|woff2?)$/",
-    "apps/",
-    "eslint/",
-    "packages/",
-    "docker-compose.yml",
-    "lint-staged.config.mjs",
-    "package.json",
-    "pnpm-lock.yaml",
-    "pnpm-workspace.yaml",
-    "skills-lock.json",
-    "tsconfig.base.json",
-    "tsconfig.json"
+    "/.*\\.(ts|tsx|js|jsx|mjs|cjs|json|lock|yml|yaml|toml|css|scss|map|svg|png|jpg|ico|woff2?)$/"
   ]
 }
