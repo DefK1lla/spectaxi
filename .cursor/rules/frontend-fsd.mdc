@@ -35,7 +35,7 @@ See `docs/NAMING.md`. React component files: **PascalCase** (`HomePage.tsx`).
 
 - **For now:** build the client product in **`apps/mobile`**. Do not invent a full `packages/app` / Solito layout until the share strategy is decided.
 - Sharing approach is **TBD** — `docs/FRONTEND_SHARE_OPTIONS.md` / task 14.
-- Keep `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui`. **API zod** (request/response schemas) — **only** in `@spectaxi/contracts` (shared with Nest); do not put HTTP zod in app helpers or a random shared bag. No micro-packages per helper. Public web is Next, not Expo Web.
+- Keep `@spectaxi/contracts`, `@spectaxi/theme`; client UI — `@spectaxi/ui` (not in admin). **API zod** (request/response schemas) — **only** in `@spectaxi/contracts` (shared with Nest); do not put HTTP zod in app helpers or a random shared bag. No micro-packages per helper. Public web is Next, not Expo Web.
 
 ## Colocation (обязательно)
 
