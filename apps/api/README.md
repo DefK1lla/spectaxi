@@ -27,7 +27,7 @@ pnpm dev
 
 - Liveness: http://localhost:3000/api/v1/health
 - Readiness: http://localhost:3000/api/v1/ready  
-  (проверка БД — после включения Prisma)
+  (проверка БД через Prisma `SELECT 1`)
 - Admin stub: http://localhost:3000/api/v1/admin/health
 - Metrics: http://localhost:3000/api/v1/metrics (`Authorization: Bearer $METRICS_TOKEN`)
 - OpenAPI (если `ENABLE_OPENAPI=true`): http://localhost:3000/api/docs
