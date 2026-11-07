@@ -4,13 +4,7 @@ import { PrismaClient } from "@prisma/client";
 
 /**
  * Prisma 7 + PostgreSQL (Neon в local/dev) через driver adapter.
- *
- * Пока PrismaModule закомментирован в AppModule, соединение не открываем.
- * Когда будете включать:
- * 1. Пропишите DATABASE_URL в apps/api/.env (строка Neon).
- * 2. Раскомментируйте PrismaModule в app.module.ts.
- * 3. Раскомментируйте $connect / $disconnect ниже и проверку в /ready.
- * 4. Выполните: pnpm --filter @spectaxi/api prisma:migrate
+ * DATABASE_URL — в `apps/api/.env` (см. `.env.example`).
  */
 @Injectable()
 export class PrismaService
@@ -27,10 +21,10 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    // await this.$connect();
+    await this.$connect();
   }
 
   async onModuleDestroy(): Promise<void> {
-    // await this.$disconnect();
+    await this.$disconnect();
   }
 }
