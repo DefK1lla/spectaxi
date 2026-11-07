@@ -10,7 +10,7 @@
     "./tamagui.config": "./src/tamagui.config.ts"
   },
   "scripts": {
-    "generate:css": "node ./scripts/generate-theme-css.mjs",
+    "generate:css": "node ./scripts/generate-theme-css.mjs && pnpm -w exec prettier --write packages/ui/src/styles.css",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"no lint yet\""
   },
