@@ -6,7 +6,7 @@
 - Формат: `application/json`.
 - Аутентификация: `Bearer JWT`.
 - Время в формате ISO-8601 UTC, в том числе `planned_start_at` (дата и время начала планового заказа).
-- Все операции изменения заказа должны быть идемпотентны там, где возможны повторы (`Idempotency-Key`).
+- Операции с деньгами **всегда** требуют заголовок `Idempotency-Key` (каталог — §8.0). Остальные изменения заказа — идемпотентны там, где возможны повторы (`Idempotency-Key`).
 
 Служебные эндпоинты под тем же префиксом `/api/v1` (не для мобильного приложения):
 
@@ -244,7 +244,7 @@
 
 ### `POST /executor/licenses`
 
-Документы лицензии на **категорию** (`category_id` + файлы). Статус `pending`, пока админ не подтвердит. Повторная подача по той же категории заменяет pending.
+Документы лицензии на **категорию** (`category_id` + файлы с `doc_kind`: `driver_license` | `equipment_usage_right`). Нужны оба вида. Статус `pending`, пока админ не верифицирует. Срока действия нет. Повторная подача по той же категории заменяет pending.
 
 ### `GET /executor/licenses`
 
@@ -256,7 +256,7 @@
 
 ### `PATCH /executor/machinery/{machineryId}`
 
-Обновление типа / локации / тарифов. Новые фото — тоже файлами (`multipart`). Смена ставок **не** трогает уже посчитанные цены в заказах: `order_pricing` фиксируется на момент отправки запроса или правки заказчиком.
+Обновление типа / локации / тарифов. Новые фото — тоже файлами (`multipart`). Смена ставок **не** трогает уже посчитанные заказы: `unit_rate` в заказе — снимок на отправку запроса (`PRODUCT_FOUNDATION.md` «Цена заказа»).
 
 ### `DELETE /executor/machinery/{machineryId}/photos/{photoId}`
 
@@ -266,7 +266,7 @@
 
 Мягкое удаление: `deleted_at` заполняется, единица исчезает из поиска и из выдачи списка.
 
-Если единица связана с заказом в `in_negotiation` / `awaiting_payment` / `in_progress` / `disputed` — `409 MACHINERY_IN_ACTIVE_ORDER`.
+Если единица связана с заказом в `in_negotiation` / `awaiting_payment` / `scheduled` / `in_progress` / `disputed` — `409 MACHINERY_IN_ACTIVE_ORDER`.
 
 ## 4) Поиск
 
@@ -277,12 +277,13 @@
 Параметры фильтра заказа — `SEARCH_ALGORITHM.md`:
 
 - `category_id`, `pricing_type`, `quantity`, `search_mode` (обязательные);
-- `planned_start_at` (обязателен при `search_mode=planned`, запрещён при `urgent`; на выдачу не влияет, копируется в заказ);
+- `planned_start_at` (обязателен при `search_mode=planned`, запрещён при `urgent`);
+- `planned_end_at` (обязателен при `planned`, > `planned_start_at`; при `urgent` опционален — «нужно к»);
 - `lat`, `lng` (обязательные);
 - `max_amount`, `radius_km` (опциональные фильтры);
 - `exclude_for_order_id` (опционально; при поиске внутри существующего заказа — обязательно передавать).
 
-При `search_mode=urgent` отдаются только исполнители с `accepts_urgent_orders = true`. Сортировка: расстояние, при равенстве цена. Контактов нет. В карточке — ставка выбранного тарифа, `computed_amount`, сводка отзывов исполнителя.
+При `search_mode=urgent` — только `accepts_urgent_orders = true`. Исполнители, занятые по пересечению окон с этим фильтром, **не** отдаются (`SEARCH_ALGORITHM.md` §6). Сортировка: расстояние, при равенстве цена. Контактов нет. В карточке — ставка, `computed_amount`, сводка отзывов.
 
 Список: плоский массив карточек машин. Карта группирует элементы с одинаковыми координатами: на точке число `+N`, по клику — список машин этой точки (снизу).
 
@@ -342,21 +343,22 @@
 
 `save_as_draft: true` → статус `draft`, без кандидата. Иначе сразу `published` и запрос одному исполнителю.
 
-В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_at` (если planned; **только в будущем**), точка (`address_text`, `location_lat`, `location_lng`), `description` (необязательно), `settlement_mode` (`direct_payment` по умолчанию; `secure_deal` — переключатель на экране отправки, виден только при включённом флаге). Даты окончания нет. Сервер пишет `unit_rate` и `computed_amount` по текущим ставкам машины и `search_activity_at`. При `secure_deal` — ещё `deal_fee_amount` (комиссия сделки, платит клиент) и `amount_to_pay`; экран отправки показывает их при включении переключателя.
+В теле: `executor_user_id` и `machinery_unit_id` обязательны, если не черновик; `category_id`, `pricing_type`, `quantity`, `search_mode`, `planned_start_at` + `planned_end_at` (если planned; начало **в будущем**, конец **строго позже** начала), при urgent — опционально только `planned_end_at` («нужно к»), точка (`address_text`, `location_lat`, `location_lng`), `description` (необязательно), `settlement_mode` (`direct_payment` по умолчанию; `secure_deal` — переключатель на экране отправки). Сервер пишет `unit_rate` и `computed_amount` по текущим ставкам машины и `search_activity_at`. При `secure_deal` — ещё `deal_fee_amount` и `amount_to_pay`.
 
 Ошибки:
 
-- `400 VALIDATION_ERROR` — в том числе `planned_start_at` в прошлом или отсутствует при `planned`, задан при `urgent`;
+- `400 VALIDATION_ERROR` — в т.ч. нет/невалидно окно при `planned`; `planned_start_at` при `urgent`; `planned_end_at` ≤ start;
 - `409 PROFILE_INCOMPLETE` — нет имени или ни одного канала связи;
 - `409 CANNOT_ORDER_OWN_MACHINERY`;
 - `409 LICENSE_NOT_APPROVED` — машина не должна была попасть в поиск;
 - `409 EXECUTOR_NOT_ACCEPTING_URGENT` — срочный запрос исполнителю с выключенным флагом;
+- `409 EXECUTOR_BUSY_WINDOW` — окно заказа пересекается с занятостью исполнителя (он не должен был быть в выдаче; гонка/устаревший UI);
 - `409 SUBSCRIPTION_REQUIRED` — при включённом флаге подписки исполнитель без активной подписки;
 - `409 SECURE_DEAL_DISABLED` — `secure_deal` при выключенном `secure_deal_enabled`.
 
 ### `PATCH /orders/{orderId}`
 
-Правка полей фильтра (тариф, количество, дата начала — только в будущем, адрес, описание; на `draft` / `published` — ещё и `settlement_mode`). Цена пересчитывается по **текущим** ставкам машины и фиксируется в `order_pricing`.
+Правка полей фильтра (тариф, количество, окно `planned_start_at` / `planned_end_at`, адрес, описание; на `draft` / `published` — ещё и `settlement_mode`). Если по заказу уже был снимок `unit_rate` (запрос отправлен): `quantity` → `computed_amount = unit_rate × quantity` без обновления ставки с машины; смена `pricing_type` → новый снимок ставки. Пока запроса машине не было (только черновик/поиск) — ориентир по текущим ставкам в выдаче. После `scheduled` / `in_progress` правки объёма/цены/окна нет (MVP).
 
 - `draft` — любые поля.
 - `published` — только если нет кандидата `notified` (иначе `409 PENDING_CANDIDATE`). Статус не меняется, `search_activity_at` обновляется.
@@ -383,7 +385,7 @@
 
 Отправка запроса исполнителю внутри существующего заказа. Только `published`, нет кандидата в `notified`. Обновляет `search_activity_at`.
 
-Запрещено, если по заказу у этого исполнителя уже есть `declined`, `auto_declined`, `expired`, `negotiation_rejected` или `terms_expired`. После `withdrawn` — разрешено.
+Запрещено, если по заказу у этого исполнителя уже есть `declined`, `auto_declined`, `expired`, `negotiation_rejected` или `terms_expired`. После `withdrawn` — разрешено: **UPDATE** той же строки кандидата снова в `notified` (в БД unique `(order_id, executor_user_id)` — `DOMAIN_MODEL_AND_ERD.md` §5).
 
 Ошибки: те же, что у `POST /orders` (`PROFILE_INCOMPLETE`, `CANNOT_ORDER_OWN_MACHINERY`, `LICENSE_NOT_APPROVED`, `EXECUTOR_NOT_ACCEPTING_URGENT`, `SUBSCRIPTION_REQUIRED`), плюс `409 PENDING_CANDIDATE`, `409 EXECUTOR_EXCLUDED`.
 
@@ -411,9 +413,13 @@
 
 ### `POST /orders/{orderId}/confirm-terms`
 
-Исполнитель фиксирует текущие условия. Только `in_negotiation`, до `terms_confirm_deadline_at`. Тело: `{ "details_version": 2 }`. Несовпадение версии — `409 STALE_ORDER_DETAILS`. `secure_deal` без привязанной карты для выплат — `409 PAYOUT_CARD_REQUIRED`.
+Исполнитель фиксирует текущие условия. Только `in_negotiation`. Дедлайн: `terms_confirm_deadline_at` плюс **30 секунд форы** (`ORDER_STATE_MACHINE.md` §7). Тело: `{ "details_version": 2 }`. Несовпадение версии — `409 STALE_ORDER_DETAILS`. `secure_deal` без привязанной карты для выплат — `409 PAYOUT_CARD_REQUIRED`.
 
-`direct_payment` → `in_progress` + assignment. `secure_deal` → `awaiting_payment` + `payment_deadline_at`.
+Если клиент в ту же гонку отменяет заказ или отклоняет партнёра — побеждает клиент, confirm-terms → `409 ORDER_NO_LONGER_RELEVANT`.
+
+При пересечении окон с другими заказами исполнителя — в ответе тот же опциональный `availability_warning`, что у accept; подтверждение **не** блокируется.
+
+`direct_payment`: **срочный** → `in_progress`; **плановый** → `scheduled`; плюс активное assignment. `secure_deal` → `awaiting_payment` + активное assignment + `payment_deadline_at`; после оплаты холдом — срочный `in_progress`, плановый `scheduled`. Назначение при возврате в поиск не удаляется — `released_at` (`ORDER_CONSISTENCY.md`).
 
 ### `GET /orders/{orderId}`
 
@@ -455,9 +461,11 @@
 
 ### `POST /orders/{orderId}/reject-negotiation`
 
-Клиент или исполнитель отклоняет партнёра. Доступно на `in_negotiation` **и** `awaiting_payment`. Нужна причина стадии. Кандидат → `negotiation_rejected`, назначение снимается, заказ → `published`. Если на `awaiting_payment` был создан платёж — он отменяется / холд возвращается до смены статуса.
+Клиент или исполнитель отклоняет партнёра. Доступно на `in_negotiation` **и** `awaiting_payment`. Нужна причина стадии. Кандидат → `negotiation_rejected`, активное назначение помечается снятым (`released_at`, строка не удаляется), заказ → `published`. Если на `awaiting_payment` была живая попытка оплаты — её отменяют / холд возвращают до смены статуса. Матрица согласованности — `ORDER_CONSISTENCY.md`.
 
-Для исполнителя это единственный способ выйти из заказа до начала работы.
+На `awaiting_payment` обязателен `Idempotency-Key` (§8.0).
+
+Для исполнителя на `in_negotiation` / `awaiting_payment` это единственный способ выйти (на `scheduled` доступна полная отмена с причиной).
 
 Запрос:
 
@@ -472,12 +480,14 @@
 
 Полная отмена. Доступно:
 
-- **клиенту** на `draft` | `published` | `in_negotiation` | `awaiting_payment`;
-- **обеим сторонам** на `in_progress`, если заказ плановый и `planned_start_at` ещё не наступил.
+- **клиенту** на `draft` | `published` | `in_negotiation` | `awaiting_payment` | `scheduled`;
+- **обеим сторонам** на `scheduled` (плановый до `planned_start_at`).
 
-Иначе `409 CANCEL_NOT_ALLOWED` (в том числе исполнителю на `in_negotiation` / `awaiting_payment` — ему `reject-negotiation`; и любому на `in_progress` после начала — только спор).
+Иначе `409 CANCEL_NOT_ALLOWED` (в том числе исполнителю на `in_negotiation` / `awaiting_payment` — ему `reject-negotiation`; на `in_progress` — только спор).
 
-На `published` причина **не нужна**; ожидающий кандидат, если есть, закрывается как `withdrawn`, исполнителю уведомление. На остальных — код стадии (`CANCELLATION_REASONS.md`; для планового до начала — стадия `planned_before_start`). Платёж/холд, если есть, отменяется или возвращается, затем `cancelled`.
+На `published` причина **не нужна**; ожидающий кандидат, если есть, закрывается как `withdrawn`, исполнителю уведомление. На остальных — код стадии (`CANCELLATION_REASONS.md`; для `scheduled` — стадия `planned_before_start`). Платёж/холд, если есть, отменяется или возвращается, затем `cancelled`.
+
+На `awaiting_payment` и при живом холде `authorized` (в т.ч. на `scheduled`) обязателен `Idempotency-Key` (§8.0).
 
 Запрос:
 
@@ -494,31 +504,33 @@
 
 ### `POST /orders/{orderId}/disputes`
 
-Только из `in_progress` или `completed` (в том числе после подтверждения одной стороны). Иначе `409 DISPUTE_NOT_ALLOWED`.
+Новая претензия (новая строка `disputes`). Только из `in_progress` или `completed` (в том числе после подтверждения одной стороны). С `completed` — не позже **2 суток** после перехода в `completed` (`409 DISPUTE_WINDOW_EXPIRED`). С `scheduled` спор нельзя. Иначе `409 DISPUTE_NOT_ALLOWED`. Если уже есть спор `open` — `409 DISPUTE_ALREADY_OPEN`. Деньги после `captured` админ через API не двигает (`ORDER_STATE_MACHINE.md` §5.5).
 
 `multipart/form-data`: `reason_code` обязателен (коды стадии; `not_paid` — только при `direct_payment`), при `other` — `reason_text`. Фото к причине нет.
 
-Переводит заказ в `disputed`, создаёт тред, отменяет таймер автоприёмки (`execution_confirm_deadline_at`), если он шёл. Из приложения пишут клиент и исполнитель.
-
-Если по заказу уже есть закрытый спор — `409 USE_APPEAL` (нужен `POST .../dispute/appeal`).
+Переводит заказ в `disputed`, создаёт тред, отменяет таймер автоприёмки (`execution_confirm_deadline_at`), если он шёл. Закрытые споры по заказу **сохраняются**. Апелляция закрытого спора — отдельный метод; новая претензия не требует апелляции.
 
 Админ в эти методы приложения не ходит.
 
-### `POST /orders/{orderId}/dispute/appeal`
+### `POST /orders/{orderId}/disputes/{disputeId}/appeal`
 
-После того как админ закрыл спор. Та же запись `disputes` снова `open`, `appeal_used = true`. Не больше одной апелляции.
+После того как админ закрыл **этот** спор. Та же запись снова `open`, `appeal_used = true`. Не больше одной апелляции на спор. Заказ снова `disputed`.
 
 Иначе `409 APPEAL_NOT_ALLOWED` или `409 APPEAL_LIMIT_REACHED`.
 
 Тело: текст, почему не согласны с решением (`reason_text`).
 
-### `GET /orders/{orderId}/dispute`
+### `GET /orders/{orderId}/disputes`
 
-Одна запись спора и её сообщения.
+Список споров заказа (новые сверху): id, status, reason, даты, `appeal_used`.
 
-### `POST /orders/{orderId}/dispute/messages`
+### `GET /orders/{orderId}/disputes/{disputeId}`
 
-Сообщение от клиента или исполнителя. `multipart/form-data`: `body` + опционально `photos[]` (файлы).
+Один спор и его сообщения.
+
+### `POST /orders/{orderId}/disputes/{disputeId}/messages`
+
+Сообщение от клиента или исполнителя в тред этого спора. `multipart/form-data`: `body` + опционально `photos[]` (файлы). Только если спор `open` (иначе `409 DISPUTE_NOT_OPEN`).
 
 Запрос (если без фото, можно JSON):
 
@@ -531,6 +543,8 @@
 ### `POST /orders/{orderId}/confirm-execution`
 
 Любая сторона на `in_progress`. Когда подтвердили оба — `completed` и выплата при сделке. Если подтвердил один — ставится `execution_confirm_deadline_at` = сейчас + 1 сутки; молчание второй стороны → автоподтверждение (`late_confirm` −3 молчавшему). Открытый спор до истечения таймера — таймер снимается.
+
+Обязателен `Idempotency-Key` (§8.0): повтор не должен создать вторую выплату.
 
 ### `POST /orders/{orderId}/reviews`
 
@@ -549,7 +563,8 @@
 Требования:
 
 - обязателен `Idempotency-Key`;
-- атомарно относительно истечения 5 минут; автоотказ остальных срочных — в той же транзакции.
+- атомарно относительно истечения 5 минут; автоотказ остальных срочных — в той же транзакции;
+- если клиент в ту же гонку снял запрос или отменил заказ — побеждает клиент, accept → `409 ORDER_NO_LONGER_RELEVANT` (`ORDER_STATE_MACHINE.md` §7).
 
 Ответ `200`:
 
@@ -558,9 +573,12 @@
   "result": "accepted",
   "order_id": "uuid",
   "status": "in_negotiation",
-  "terms_confirm_deadline_at": "2026-09-08T11:20:00Z"
+  "terms_confirm_deadline_at": "2026-09-08T11:20:00Z",
+  "availability_warning": null
 }
 ```
+
+Если окно этого заказа пересекается с другими заказами исполнителя (`SEARCH_ALGORITHM.md` §6) — в `availability_warning` объект с кодом `AVAILABILITY_OVERLAP_WARNING` и списком пересечений (order id + окна). Это **не** ошибка: accept всё равно проходит. Клиент UI обязан показать текст до/после действия.
 
 После успеха фиксируется обмен контактами. Цена заказа здесь не выставляется.
 
@@ -574,6 +592,8 @@
 ### `POST /orders/{orderId}/candidates/{candidateId}/decline`
 
 Первый отказ исполнителя. Заказ остаётся `published`. Нужна причина (пишется в `order_candidates.reject_reason_*`, не в заказ).
+
+Если в ту же секунду сработал таймер 5 минут — побеждает таймер: кандидат `expired`, decline → `409 ORDER_NO_LONGER_RELEVANT` (`ORDER_STATE_MACHINE.md` §7).
 
 Запрос:
 
@@ -594,9 +614,37 @@
 
 Работает с первого релиза через «Безопасную сделку». Провайдер выбирается по `order_pricing.currency` → `currencies.secure_deal_provider_code`. В MVP только `RUB` → ЮKassa. Флаг `secure_deal_enabled` — аварийный выключатель. Если у валюты заказа нет провайдера — `secure_deal` недоступен (`400 CURRENCY_SECURE_DEAL_UNAVAILABLE`).
 
+Доменная семантика статусов, попыток, late webhook и reconcile — `ORDER_STATE_MACHINE.md` §5.
+
+### 8.0) `Idempotency-Key` на операциях с деньгами
+
+Заголовок **обязателен** (иначе `400 IDEMPOTENCY_KEY_REQUIRED`):
+
+| Операция                                                  | Когда                                                                         |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `POST /orders/{orderId}/secure-deal/create-payment`       | всегда                                                                        |
+| `POST /orders/{orderId}/cancel`                           | заказ в `awaiting_payment` / `scheduled` **или** есть живой холд `authorized` |
+| `POST /orders/{orderId}/reject-negotiation`               | заказ в `awaiting_payment`                                                    |
+| `POST /orders/{orderId}/confirm-execution`                | всегда (может запустить payout)                                               |
+| `POST /admin/orders/{orderId}/disputes/{disputeId}/close` | если админ двигает деньги (выплата / возврат холда)                           |
+| `POST /admin/orders/{orderId}/cancel`                     | если есть холд `authorized` на возврат                                        |
+
+Повтор с тем же ключом и тем же телом — тот же результат, без второго списания / второй сделки / второй выплаты. Webhook идемпотентен по `provider_event_id` (отдельный механизм, не клиентский заголовок).
+
+`POST .../candidates/.../accept` — `Idempotency-Key` уже обязателен (§6); к деньгам не относится, правило не меняется.
+
 ### `POST /orders/{orderId}/secure-deal/create-payment`
 
-Создание сделки и платежа у провайдера. Только `awaiting_payment` + `secure_deal`. Сумма = `order_pricing.amount_to_pay` (клиент сумму не передаёт). Оплата зачисляется на баланс сделки → `authorized` → `in_progress`. При `completed` сервер создаёт выплату исполнителю на привязанную карту на `computed_amount` → `captured`. При отмене / возврате в поиск — возврат клиенту.
+Создание сделки и платежа у провайдера. Только `awaiting_payment` + `secure_deal`. Сумма = `order_pricing.amount_to_pay` (клиент сумму не передаёт). Оплата зачисляется на баланс сделки → `authorized` → заказ **срочный** `in_progress` / **плановый** `scheduled`. При `completed` сервер создаёт выплату исполнителю на привязанную карту на `computed_amount` → `captured`. При отмене / возврате в поиск — возврат клиенту.
+
+Обязателен заголовок `Idempotency-Key`.
+
+Поведение попыток:
+
+- на заказ — история `payment_records`; одновременно не больше одной записи в `pending` \| `authorized`;
+- тот же ключ при живом `pending` → `200` с тем же `payment_id` / `payment_url`, без нового вызова создания сделки у провайдера (если ids ещё неизвестны — сначала reconcile);
+- после `failed` — новая попытка = **новый** `payment_records`; статус заказа не меняется (`awaiting_payment` до дедлайна или иного перехода);
+- порядок записи: сначала `pending` + ключ в БД, затем вызов провайдера; сбой между ними чинит reconcile job (`ORDER_STATE_MACHINE.md` §5.3).
 
 Запрос:
 
@@ -618,9 +666,14 @@
 }
 ```
 
+Ошибки (дополнительно к общим):
+
+- `409 PAYMENT_ALREADY_AUTHORIZED` — по заказу уже есть `authorized`;
+- `409 ORDER_NOT_AWAITING_PAYMENT` — заказ не в `awaiting_payment`.
+
 ### `GET /orders/{orderId}/payment-status`
 
-Получение текущего платежного статуса.
+Актуальная попытка оплаты (живая `pending` \| `authorized`, иначе последняя по времени) и её `payment_status`. История попыток в MVP в ответе не обязательна.
 
 ### `POST /payments/webhooks/{providerCode}`
 
@@ -633,7 +686,16 @@ Webhook от платежного провайдера.
 - асинхронная обработка;
 - фиксация результата в `payment_webhook_events`.
 
-Если истёк срок сделки (180 дней), провайдер вернул деньги клиенту, а статус платежа был `authorized` — заказ → `disputed`. Неоплаченный заказ провайдер не трогает; наш таймаут возвращает заказ в `published`.
+Нормальный `authorized` при заказе `awaiting_payment` → срочный `in_progress` / плановый `scheduled`.
+
+Поздний `authorized`, если заказ уже ушёл из ожидания оплаты (`ORDER_STATE_MACHINE.md` §5.4):
+
+- заказ `cancelled` или `published` → автовозврат клиенту, платёж `refunded`, заказ не поднимать;
+- иначе → не двигать деньги автоматически; эскалация в `disputed` + алерт админу.
+
+Если истёк срок сделки (180 дней), провайдер вернул деньги клиенту, а статус платежа был `authorized` — заказ → `disputed`. Неоплаченный заказ провайдер не трогает; наш таймаут возвращает заказ в `published`. `failed` у попытки оплату заказа в `published` / `cancelled` сам по себе не переводит.
+
+Регулярный reconcile (не HTTP endpoint клиента): та же логика apply, что у webhook — `ORDER_STATE_MACHINE.md` §5.3. Клиентский API сверку не вызывает.
 
 ## 8.1) Уведомления
 
@@ -691,15 +753,15 @@ Webhook от платежного провайдера.
 
 ### `POST /admin/licenses/{licenseId}/review`
 
-`{ "decision": "approved" | "rejected", "comment": null }`. Исполнителю уведомление.
+`{ "decision": "approved" | "rejected" | "revoke", "comment": null }`. `revoke` — снять ранее выданный `approved` (нужен `comment`). Исполнителю уведомление. При `rejected` / `revoke` машины категории выпадают из поиска; незавершённые заказы этого исполнителя по затронутой категории → `published` + возврат холда (`SERVICE_RULES.md`).
 
-### `POST /admin/orders/{orderId}/dispute/messages`
+### `POST /admin/orders/{orderId}/disputes/{disputeId}/messages`
 
-Сообщение от админа. Тоже можно прикрепить фото (`photos[]`).
+Сообщение от админа в указанный спор. Тоже можно прикрепить фото (`photos[]`). Спор должен быть `open`.
 
-### `POST /admin/orders/{orderId}/dispute/close`
+### `POST /admin/orders/{orderId}/disputes/{disputeId}/close`
 
-Админ выбирает статус, в который перевести заказ: только `completed`, `cancelled`, `in_progress`. Нельзя `published`.
+Закрывает **этот** спор. Админ выбирает статус заказа: только `completed`, `cancelled`, `in_progress`, `scheduled`. Нельзя `published`. Если других `open` споров нет — заказ переходит в выбранный статус; иначе `409 OTHER_DISPUTE_OPEN` (в норме одновременно один open).
 
 Запрос:
 
@@ -713,13 +775,17 @@ Webhook от платежного провайдера.
 
 Деньги:
 
-- платёж `authorized` (холд, ещё не выплата) — админ может выплатить или вернуть;
-- платёж уже `captured` — денег не трогать, только статус и опциональные санкции; закрытие в `cancelled` возврата **не** делает;
-- платежа не было — денег нет.
+- платёж `authorized` (холд, ещё не выплата) — админ может **целиком** выплатить или **целиком** вернуть (частичных сумм в MVP нет);
+- платёж уже `captured` — денег не трогать, только статус и опциональные санкции при доказанной вине; закрытие в `cancelled` возврата **не** делает;
+- платежа не было — денег нет; санкции только по доказательствам.
+
+Если закрытие двигает деньги (выплата / возврат холда) — обязателен `Idempotency-Key` (§8.0).
 
 ### `POST /admin/orders/{orderId}/cancel`
 
-Отмена заказа админом из любого статуса, кроме `completed`. На `published` ожидающий кандидат закрывается как `withdrawn`. На `disputed` одновременно закрывает спор с исходом `cancelled`. Холд `authorized` возвращается; `captured` не трогается. `cancelled_by_role = admin`, штрафа нет, обеим сторонам уведомление.
+Отмена заказа админом из любого статуса, кроме `completed`. На `published` ожидающий кандидат закрывается как `withdrawn`. На `disputed` одновременно закрывает **открытый** спор с исходом `cancelled`. Холд `authorized` возвращается; `captured` не трогается. `cancelled_by_role = admin`, штрафа нет, обеим сторонам уведомление.
+
+При возврате холда `authorized` обязателен `Idempotency-Key` (§8.0).
 
 Запрос: `{ "comment": "Причина для аудита" }`.
 
@@ -727,7 +793,7 @@ Webhook от платежного провайдера.
 
 ### `POST /admin/users/{userId}/block` / `POST /admin/users/{userId}/unblock`
 
-`{ "reason": "..." }`. Заполняет / очищает `blocked_at`, `blocked_reason`. Заблокированный: не в поиске, не создаёт и не принимает заказы; его ожидающие кандидаты закрываются как `declined` без штрафа; активные заказы админ отменяет отдельно `POST /admin/orders/{id}/cancel`.
+`{ "reason": "..." }`. Заполняет / очищает `blocked_at`, `blocked_reason`. Заблокированный: не в поиске, не создаёт и не принимает заказы. Все его незавершённые заказы → `published` (исключение из правила «после фиксации сделки нельзя в поиск»): назначения `released_at`, кандидаты закрываются, клиентам уведомление «искать снова в этом заказе». Живой холд `authorized` по `secure_deal` → возврат клиенту; `captured` — без автовозврата (§5.5). То же при отзыве `approved` у лицензии (`POST /admin/licenses/{id}/review` с отзывом / повторный reject после approve — если появится отдельный revoke, поведение то же).
 
 ### `GET /admin/rating-events?status=pending_admin`
 
@@ -745,6 +811,7 @@ Webhook от платежного провайдера.
 - `published`
 - `in_negotiation`
 - `awaiting_payment`
+- `scheduled`
 - `in_progress`
 - `completed`
 - `disputed`
@@ -763,7 +830,8 @@ Webhook от платежного провайдера.
 
 ### Платеж (`payment_records.payment_status`)
 
-- `not_required`
+У `direct_payment` строк оплаты нет. Статусы строки:
+
 - `pending`
 - `authorized`
 - `captured`
@@ -774,13 +842,14 @@ Webhook от платежного провайдера.
 ## 11) Фоновые задачи
 
 - 5 минут: `notified` → `expired`, заказ `published`, исполнителю −3.
-- 1 сутки: `terms_confirm_deadline_at` → `terms_expired`, заказ `published`, −3.
-- 1 сутки: `payment_deadline_at` → платёж отменить, заказ `published`, клиенту −3.
+- `terms_confirm_deadline_at` **+ 30 секунд форы**: затем `terms_expired`, заказ `published`, −3 (`ORDER_STATE_MACHINE.md` §7).
+- 1 сутки: `payment_deadline_at` → живую попытку оплаты отменить, заказ `published`, клиенту −3.
 - 1 сутки: `execution_confirm_deadline_at` → автоподтверждение, `completed`, `late_confirm` −3.
+- `planned_start_at`: заказ в `scheduled` → `in_progress` (без кнопки).
 - «Исполнитель не найден»: `published` без `notified` — срочный через 24 ч после `search_activity_at` (последняя отправка запроса / правка / вход в поиск), плановый при `planned_start_at` → `cancelled` (system).
 
 ## 12) Минимальные SLA для API MVP
 
 - Первое `accept` / истечение 5 минут / автоотказ остальных срочных: атомарность важнее гонки.
-- `GET /search/machinery`: p95 < 600 мс при базовой геовыборке.
+- `GET /search/machinery`: p95 < 600 мс при базовой геовыборке (на проде — PostGIS, см. `TECH_STACK.md`).
 - При недоступности платежного провайдера основной сценарий `direct_payment` продолжает работать.

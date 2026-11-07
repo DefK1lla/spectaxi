@@ -2,7 +2,7 @@
 
 ## 1) Цель
 
-Минимальная модель MVP: без обязательной безопасной сделки, без внутреннего кошелька, без календаря занятости. Выровнена с `USER_SCENARIOS.md`.
+Минимальная модель MVP: без обязательной безопасной сделки, без внутреннего кошелька, без жёсткого календаря занятости (только окна заказа + мягкое предупреждение). Выровнена с `USER_SCENARIOS.md`.
 
 ## 2) Сущности
 
@@ -115,7 +115,7 @@
 
 ### `executor_licenses`
 
-Одна лицензия на пару исполнитель + категория (не на каждую машину). Лицензия нужна для каждого типа транспорта.
+Одна лицензия на пару исполнитель + категория (не на каждую машину). Лицензия нужна для каждого типа транспорта. Верифицирует **админ** (`SERVICE_RULES.md`).
 
 - `id`;
 - `executor_profile_id`;
@@ -126,16 +126,22 @@
 - `reviewed_by_admin` (nullable);
 - `created_at`, `updated_at`.
 
-Уникально `(executor_profile_id, category_id)`. Документы — `executor_license_files` (`license_id`, `url`, `created_at`).
+Срока действия / `expires_at` **нет**.
 
-Машину без `approved` сохранить можно, в поиске нет.
+Уникально `(executor_profile_id, category_id)`. Документы — `executor_license_files`:
+
+- `license_id`, `url`, `created_at`;
+- `doc_kind`: `driver_license` (права) | `equipment_usage_right` (право пользования техникой — любой подходящий документ).
+
+Для подачи на проверку нужны файлы обоих видов. Машину без `approved` сохранить можно, в поиске нет. Отзыв `approved` / блокировка пользователя — незавершённые заказы исполнителя → `published` + возврат холда (`SERVICE_RULES.md`).
 
 ### `orders`
 
-- `status`: `draft`, `published`, `in_negotiation`, `awaiting_payment`, `in_progress`, `completed`, `disputed`, `cancelled`;
+- `status`: `draft`, `published`, `in_negotiation`, `awaiting_payment`, `scheduled`, `in_progress`, `completed`, `disputed`, `cancelled`;
 - `client_user_id`, `category_id`, `settlement_mode` (`direct_payment` | `secure_deal`);
 - `search_mode` (`urgent` | `planned`);
-- `planned_start_at` (timestamptz, nullable; обязательно при `planned`, пусто при `urgent`) — дата и время начала из календаря, для информации исполнителю; используется только для двух системных правил: автоотмена «исполнитель не найден» и окно отмены планового до начала;
+- `planned_start_at` (timestamptz, nullable; обязательно при `planned`, пусто при `urgent`) — начало окна работ; системно: автоотмена «исполнитель не найден» на `published`, перевод `scheduled` → `in_progress`, граница окна отмены на `scheduled`;
+- `planned_end_at` (timestamptz, nullable) — **до какого момента** заказ должен быть завершён (задаёт заказчик). Обязателен при `planned` и строго позже `planned_start_at`. При `urgent` — опционально («нужно к …»). Окна занятости / предупреждения / фильтр поиска — `SEARCH_ALGORITHM.md` §6;
 - `search_activity_at` (nullable) — последняя активность в поиске: вход в `published`, отправка запроса исполнителю, правка заказа клиентом. Точка отсчёта 24 часов бездействия для автоотмены срочного;
 - `details_version` (int, default 1);
 - `address_text`, `location_lat`, `location_lng`, `description` (nullable);
@@ -147,7 +153,7 @@
 - `repeated_from_order_id`;
 - `created_at`, `updated_at`.
 
-Нет статуса `assigned`. Нет окна работ, окончания и полей занятости.
+Нет статуса `assigned`. Окно работ — `planned_start_at` / `planned_end_at` (см. выше); жёсткого запрета пересечений нет.
 
 ### `order_pricing`
 
@@ -160,7 +166,7 @@
 
 `secure_deal` допустим, только если у `currency` задан `secure_deal_provider_code`.
 
-`unit_rate` копируется с машины при отправке запроса и при каждой правке заказчиком; смена ставок исполнителем на машине запись не меняет.
+`unit_rate` копируется с машины при **отправке запроса** (снимок). Правка `quantity` пересчитывает только `computed_amount` от этого снимка. Смена `pricing_type` — новый снимок ставки с машины для нового типа. Смена ставок исполнителем на машине уже созданный `order_pricing` не меняет. См. `PRODUCT_FOUNDATION.md` «Цена заказа».
 
 ### `order_candidates`
 
@@ -173,14 +179,20 @@
 
 Статуса `viewed` нет. `auto_declined` — система закрыла запрос, потому что исполнитель принял другой срочный заказ; для клиента это отказ, штрафа исполнителю нет.
 
-На заказ не более одного `notified`. Один исполнитель может одновременно быть `notified` по нескольким заказам. Assignment при «подтвердить условия»; при возврате на поиск снимается.
+**Одна строка на пару** `(order_id, executor_user_id)` (unique в БД). Повторный запрос после `withdrawn` — **UPDATE** той же строки снова в `notified` (новые `notified_at` / дедлайн), не INSERT. После `declined` / `auto_declined` / `expired` / `negotiation_rejected` / `terms_expired` повтор запрещён — код не переводит строку обратно в `notified`.
+
+На заказ не более одного `notified` (partial unique). Один исполнитель может одновременно быть `notified` по нескольким заказам. Assignment при «подтвердить условия»; при возврате на поиск **не удаляется** — помечается снятым. Согласованность статусов — `ORDER_CONSISTENCY.md`.
 
 ### `order_assignments`
 
-- `id`, `order_id` unique, `executor_user_id`, `machinery_unit_id`;
+История закреплений исполнителя за заказом (0..N строк).
+
+- `id`, `order_id`, `executor_user_id`, `machinery_unit_id`;
+- `released_at` (nullable) — `null` = активное назначение;
+- `release_reason` (nullable) — кратко: `unpaid_timeout` | `partner_rejected` | `terms_expired` | `client_edit` | `planned_cancel` | `consistency_repair` | …;
 - `created_at`.
 
-Появляется при «подтвердить условия». Снимается, если заказ вернулся в `published` (неоплата и т.п.) — на `in_progress` назначение уже не снимается.
+Появляется при «подтвердить условия». Возврат в `published` / отмена до работы после назначения → `released_at`, строка остаётся. Новое подтверждение условий после нового матча — **новая** строка. На заказ не больше одного активного (`released_at IS NULL`).
 
 ### `order_status_events`
 
@@ -192,8 +204,9 @@
 
 ### `disputes`
 
-Одна запись на заказ (`order_id` unique).
+На заказ — **0..N** споров (история претензий не затирается). Одновременно не больше **одного** `open`.
 
+- `id`, `order_id` (FK, не unique);
 - `opened_by_user_id` (nullable, если открыл провайдер);
 - `reason_code`, `reason_text`;
 - `status` (`open`, `closed`);
@@ -201,7 +214,7 @@
 - `closed_to_status`, `closed_by_admin`;
 - `created_at`, `updated_at`.
 
-Апелляция: та же строка снова `open`, `appeal_used = true`, сообщения продолжаются. Второго спора-строки нет.
+Апелляция: **та же** строка снова `open`, `appeal_used = true`, сообщения продолжаются; не больше одной апелляции **на этот** спор. Новая независимая претензия после закрытия — **новая** строка `disputes` (если ещё можно открыть спор по правилам заказа). Обращения в поддержку не по заказу (баг приложения и т.п.) в MVP **не** моделируем.
 
 ### `dispute_messages` / `dispute_message_photos`
 
@@ -233,10 +246,29 @@
 
 ### `payment_records` / `payment_webhook_events`
 
-- `payment_records`: `order_id`, `currency`, `provider_code` (из `currencies.secure_deal_provider_code` на момент создания), `provider_deal_id`, `provider_payment_id`, `provider_payout_id` (nullable), `payment_status`, сумма платежа = `amount_to_pay`, сумма выплаты = `computed_amount`, `created_at`, `updated_at`.
-- `payment_webhook_events`: `provider_event_id` unique, сырое тело, обработан.
+На заказ — **0..N** попыток оплаты (`secure_deal`). История сохраняется; одновременно живой холд/ожидание оплаты — не больше одной попытки.
 
-Холд только после создания платежа на `awaiting_payment`. Клиент сумму не задаёт. В MVP провайдер — ЮKassa (`RUB`): `authorized` = деньги на балансе сделки, `captured` = выплата исполнителю прошла (`ORDER_STATE_MACHINE.md`, раздел 5). При появлении других валют — тот же поток через другой адаптер `PaymentProvider`.
+- `payment_records`:
+  - `id`, `order_id` (FK, **не** unique);
+  - `currency`, `provider_code` (из `currencies.secure_deal_provider_code` на момент создания);
+  - `provider_deal_id` (nullable до ответа провайдера), `provider_payment_id` (nullable), `provider_payout_id` (nullable);
+  - `payment_status` (`pending` | `authorized` | `captured` | `failed` | `cancelled` | `refunded`; для `direct_payment` записей нет — на заказе логический `not_required`);
+  - `idempotency_key` — ключ `create-payment`, пишется **до** вызова провайдера; unique;
+  - сумма платежа = `amount_to_pay`, сумма выплаты = `computed_amount`;
+  - `created_at`, `updated_at`.
+- `payment_webhook_events`: `id`, `payment_record_id` (FK, nullable если событие ещё не сопоставлено), `provider_event_id` unique, сырое тело, `processed_at` (nullable), `created_at`.
+
+Холд только после успешной оплаты на `awaiting_payment`. Клиент сумму не задаёт. В MVP провайдер — ЮKassa (`RUB`): `authorized` = деньги на балансе сделки, `captured` = выплата исполнителю прошла (`ORDER_STATE_MACHINE.md`, раздел 5). Попытки, `failed`, late webhook и reconcile — там же §5.1–5.4. При появлении других валют — тот же поток через другой адаптер `PaymentProvider`.
+
+### `idempotency_keys`
+
+Хранение клиентских `Idempotency-Key` для money-мутаций, кроме ключа `create-payment` (он на `payment_records.idempotency_key`): cancel / reject на `awaiting_payment`, confirm-execution, admin payout/refund/cancel с холдом (`API_CONTRACT_MVP.md` §8.0).
+
+- `id`, `user_id` или `admin_user_id` (кто вызвал), `key` , `route` (стабильный путь операции), `request_hash` (хэш тела);
+- `response_code`, `response_body` (для replay);
+- `created_at`, `expires_at`.
+
+Unique `(actor_type, actor_id, route, key)`.
 
 ### `admin_users`
 
@@ -304,20 +336,22 @@ erDiagram
     machinery_categories ||--o{ orders : requested_category
     orders ||--|| order_pricing : has
     orders ||--o{ order_candidates : request_one_at_a_time
-    orders ||--o| order_assignments : assigned_to_one
+    orders ||--o{ order_assignments : assignment_history
     orders ||--o{ order_status_events : tracks
     orders ||--o{ contact_exchange_events : contact_shared
-    orders ||--o| disputes : one_dispute
+    orders ||--o{ disputes : dispute_history
     disputes ||--o{ dispute_messages : has
     dispute_messages ||--o{ dispute_message_photos : photos
     orders ||--o{ reviews : public_stars
-    orders ||--o| payment_records : payment_link
+    orders ||--o{ payment_records : payment_attempts
     users ||--o{ notifications : inbox
     users ||--o{ rating_events : score_changes
     users ||--o{ reviews : writes
     payment_records ||--o{ payment_webhook_events : updated_by
     users ||--o{ refresh_tokens : sessions
     users ||--o{ push_devices : devices
+    users ||--o{ idempotency_keys : client_money_replay
+    admin_users ||--o{ idempotency_keys : admin_money_replay
     admin_users ||--o{ executor_licenses : reviews
     admin_users ||--o{ disputes : closes
 ```
@@ -330,58 +364,104 @@ erDiagram
 - У типа транспорта обязателен тип лицензии из справочника админа. Лицензия одна на категорию; без `approved` машины категории не в поиске. Смена типа лицензии у категории сбрасывает действительность лицензий и убирает машины из поиска.
 - Свою технику заказать нельзя. Заблокированный не ищет и не принимает.
 - Цена заказа = ставка × количество, не ручной ввод.
-- Календаря занятости нет: у `urgent` нет даты; у `planned` дата и время начала на выдачу не влияют (используются только для автоотмены «не найден» и окна отмены до начала).
+- Жёсткого календаря нет: занятость — мягко по окнам заказа (`SEARCH_ALGORITHM.md` §6). У `planned` обязательны начало и конец; у `urgent` конец опционален. Окно влияет на выдачу (скрытие занятых) и предупреждение при accept/confirm-terms; запрета принять нет.
 - Срочный поиск показывает только `accepts_urgent_orders = true`; флаг меняет только исполнитель.
-- На один заказ один ожидающий кандидат; у одного исполнителя может быть несколько ожидающих запросов. Принял срочный — остальные срочные `auto_declined` (на уровне исполнителя, не машины).
-- Пока не `in_progress`, срыв матча возвращает заказ в поиск. После `in_progress` поиск на этом заказе нельзя.
-- Полную отмену до работы делает только клиент; исполнитель до работы только отклоняет партнёра. Плановый на `in_progress` до `planned_start_at` могут отменить обе стороны.
+- На один заказ один ожидающий кандидат; одна строка кандидата на пару заказ×исполнитель; у одного исполнителя может быть несколько ожидающих запросов. Принял срочный — остальные срочные `auto_declined` (на уровне исполнителя, не машины).
+- Пока заказ не в `scheduled` / `in_progress`, срыв матча возвращает заказ в поиск. После фиксации сделки поиск на этом заказе нельзя.
+- Полную отмену до фиксации сделки делает только клиент; исполнитель до этого только отклоняет партнёра. Плановый на `scheduled` могут отменить обе стороны. На `in_progress` пользователи только через спор.
 - `published` без кандидата протухает: срочный — 24 ч без активности клиента, плановый — дата начала.
 - Не ответил за 5 минут = отказ (скрыт, повторно нельзя).
 - Открытый спор отменяет таймер автоприёмки.
-- Один `disputes` на заказ. Отмена `in_progress` после начала работы — только через спор.
+- Споров на заказ 0..N; одновременно не больше одного `open`. Спор — с `in_progress` / `completed` (не с `scheduled`).
 - Деньги: источник истины — провайдер, выбранный по `currency`. Нет платежа — нет возврата холда провайдером. После `captured` админ деньги не двигает. Вход по телефону — только если есть OTP-провайдер под номер (`phone-support`).
+- `secure_deal`: на заказ 0..N `payment_records`; одновременно не больше одной записи в `pending` или `authorized`. После `failed` — новый row на следующую попытку. `create-payment` пишет `pending` + `idempotency_key` до вызова провайдера.
+- Назначения: 0..N `order_assignments`, не больше одного с `released_at IS NULL`. Полная матрица со статусом заказа / кандидатом / оплатой — `ORDER_CONSISTENCY.md`.
 
-## 5) Индексы и ограничения
+## 5) Жёсткие ограничения БД
 
-Обязательные:
+Источник переходов — `ORDER_STATE_MACHINE.md`. Матрица «заказ ↔ кандидат ↔ назначение ↔ платёж» — `ORDER_CONSISTENCY.md`. Здесь — что **обязано** жить в PostgreSQL (unique / partial unique / CHECK / FK), чтобы гонка или баг не записали ерунду. Остальное — код + sweeper.
 
-- `users.phone` unique;
-- `currencies.code` PK; в MVP сид `RUB` + `secure_deal_provider_code = yookassa`;
-- `executor_profiles.user_id` unique;
-- `license_types.code` unique;
-- `machinery_categories.code` unique;
-- `machinery_categories.license_type_id` обязателен;
-- `category_pricing_types(category_id, pricing_type_code)` PK;
-- `machinery_pricing_rules(machinery_unit_id, pricing_type)` unique среди активных;
-- `executor_licenses(executor_profile_id, category_id)` unique;
-- `order_candidates`: не более одного `notified` на заказ; запрет нового запроса при `declined` / `auto_declined` / `expired` / `negotiation_rejected` / `terms_expired`;
-- `disputes.order_id` unique;
-- `reviews(order_id, from_user_id)` unique;
-- `payment_webhook_events.provider_event_id` unique;
-- `payment_records(provider_code, provider_payment_id)` unique;
-- `admin_users.email` unique;
-- `refresh_tokens.token_hash` unique;
-- `push_devices.expo_push_token` unique.
+Prisma/миграции должны отразить этот список один в один.
 
-Рекомендуемые:
+### 5.1) Unique и partial unique (обязательно)
+
+| Ограничение                                                                                          | Зачем                                                  |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `users.phone` unique                                                                                 | логин                                                  |
+| `currencies.code` PK; сид MVP: `RUB` → `yookassa`                                                    | валюта / провайдер                                     |
+| `executor_profiles.user_id` unique                                                                   | один профиль исполнителя                               |
+| `license_types.code` unique                                                                          | справочник                                             |
+| `machinery_categories.code` unique                                                                   | справочник                                             |
+| `category_pricing_types(category_id, pricing_type_code)` PK                                          | тарифы категории                                       |
+| `machinery_pricing_rules`: partial unique `(machinery_unit_id, pricing_type) WHERE is_active`        | одна активная ставка типа                              |
+| `executor_licenses(executor_profile_id, category_id)` unique                                         | одна лицензия на категорию                             |
+| `order_pricing.order_id` unique                                                                      | ровно одна цена на заказ                               |
+| `order_candidates(order_id, executor_user_id)` unique                                                | одна строка на пару; повтор после `withdrawn` = UPDATE |
+| `order_candidates`: partial unique `order_id WHERE candidate_status = 'notified'`                    | один ожидающий запрос на заказ                         |
+| `order_assignments`: partial unique `order_id WHERE released_at IS NULL`                             | одно активное назначение                               |
+| `disputes`: partial unique `order_id WHERE status = 'open'`                                          | один открытый спор                                     |
+| `reviews(order_id, from_user_id)` unique                                                             | один отзыв от стороны                                  |
+| `payment_records.idempotency_key` unique                                                             | replay `create-payment`                                |
+| `payment_records`: partial unique `order_id WHERE payment_status IN ('pending', 'authorized')`       | одна живая попытка оплаты                              |
+| `payment_records(provider_code, provider_payment_id)` unique WHERE `provider_payment_id IS NOT NULL` | id у провайдера                                        |
+| `payment_webhook_events.provider_event_id` unique                                                    | идемпотентность webhook                                |
+| `idempotency_keys(actor_type, actor_id, route, key)` unique                                          | money-replay кроме create-payment                      |
+| `admin_users.email` unique                                                                           | вход админа                                            |
+| `refresh_tokens.token_hash` unique                                                                   | сессии                                                 |
+| `push_devices.expo_push_token` unique                                                                | устройство                                             |
+
+Повторный запрос исполнителю после блокирующих статусов (`declined` / `auto_declined` / `expired` / `negotiation_rejected` / `terms_expired`) — **не** отдельный DB exclude: unique пары + код не делает UPDATE обратно в `notified`.
+
+### 5.2) CHECK (обязательно, где дёшево)
+
+- `orders`: `(search_mode = 'urgent' AND planned_start_at IS NULL) OR (search_mode = 'planned' AND planned_start_at IS NOT NULL AND planned_end_at IS NOT NULL AND planned_end_at > planned_start_at)`;
+- `orders`: при `urgent` если `planned_end_at` задан — он в будущем на момент создания/публикации (проверка в коде; при правке — снова валидно);
+- `orders.settlement_mode` ∈ (`direct_payment`, `secure_deal`); `orders.search_mode` ∈ (`urgent`, `planned`); `orders.status` ∈ известному enum FSM;
+- `order_pricing.quantity > 0`; `unit_rate > 0`; `computed_amount >= 0`; `deal_fee_amount >= 0`; `amount_to_pay = computed_amount + deal_fee_amount` (или считать `amount_to_pay` generated/всегда писать в одной TX с проверкой в коде — если generated неудобен в Prisma, CHECK на `amount_to_pay >= computed_amount`);
+- `machinery_pricing_rules.base_rate > 0`;
+- `reviews.stars` BETWEEN 1 AND 5;
+- `executor_license_files.doc_kind` ∈ (`driver_license`, `equipment_usage_right`);
+- `payment_records.payment_status` ∈ (`pending`, `authorized`, `captured`, `failed`, `cancelled`, `refunded`);
+- `order_candidates.candidate_status` ∈ полном enum выше;
+- `disputes.status` ∈ (`open`, `closed`).
+
+`machinery_categories.license_type_id` — NOT NULL.
+
+### 5.3) FK (обязательно)
+
+Все перечисленные в ERD связи — обычные FK. Удаление пользователя / заказа в MVP **не** каскадим слепо: заказы и платежи сохраняем; soft-block пользователя. Фото/файлы лицензий — ON DELETE CASCADE с родительской лицензией ок. `order_pricing` — CASCADE с `orders` или запрет удаления заказа (предпочтительнее не удалять заказы).
+
+### 5.4) Только в коде + sweeper (не CHECK на весь FSM)
+
+Матрица статусов из `ORDER_CONSISTENCY.md` (например «на `in_progress` должно быть активное назначение») в БД **не** кодируем одним CHECK — слишком хрупко и мешает легитимным промежуточным TX. Держим: транзакции `FOR UPDATE` на `orders`, инварианты в сервисе, периодический sweeper/reconcile + алерты.
+
+То же: «не заказать свою технику», «без `approved` не в поиске», окна спора 2 суток, автоотказ срочных — код/джобы.
+
+### 5.5) Рекомендуемые индексы
 
 - `orders(status)`, `orders(client_user_id, status)`, `orders(search_mode, status)`;
-- `machinery_units(executor_profile_id)`, `machinery_units(location_lat, location_lng)` (позже PostGIS);
+- `machinery_units(executor_profile_id)`, `machinery_units(location_lat, location_lng)`; на проде — PostGIS geography/GIST по точке машины (`TECH_STACK.md`);
 - `executor_profiles(accepts_urgent_orders, subscription_status)`;
-- `order_candidates(executor_user_id, candidate_status)` — для автоотказа остальных срочных запросов при принятии;
+- `order_candidates(executor_user_id, candidate_status)` — автоотказ срочных;
 - `order_candidates(response_deadline_at)`, `orders(terms_confirm_deadline_at)`, `orders(payment_deadline_at)`, `orders(execution_confirm_deadline_at)`;
-- `orders(status, search_activity_at)`, `orders(status, planned_start_at)` — джоба «исполнитель не найден»;
+- `orders(status, search_activity_at)`, `orders(status, planned_start_at)` — «не найден» и `scheduled`→`in_progress`;
 - `rating_events(status)` — очередь `pending_admin`;
-- `orders(cancel_reason_code)`, `orders(cancelled_by_role)`;
-- `orders(repeated_from_order_id)`;
+- `orders(cancel_reason_code)`, `orders(cancelled_by_role)`, `orders(repeated_from_order_id)`;
 - `notifications(user_id, created_at)`;
 - `reviews(to_user_id)`;
-- `executor_licenses(status)` для очереди админки;
-- `auth_codes(phone, created_at)` — последний код и лимиты;
-- `refresh_tokens(user_id)`, `push_devices(user_id)`.
+- `executor_licenses(status)` — очередь админки;
+- `auth_codes(phone, created_at)`;
+- `refresh_tokens(user_id)`, `push_devices(user_id)`;
+- `payment_records(order_id, created_at)`, `payment_records(payment_status, updated_at)` — UI и регулярный reconcile;
+- `order_assignments(order_id, created_at)`;
+- `idempotency_keys(expires_at)`.
 
 ## 6) Отложить
 
-- Календарь занятости исполнителя / техники (в MVP только ручной флаг срочных заказов).
-- Показ внутреннего рейтинга в UI.
-- `Company*`.
+Источник сроков/триггеров по деньгам и календарю — `PRODUCT_FOUNDATION.md` §17.
+
+- **Жёсткий календарь** (запрет пересечений, буферы) — до боли на проде от мягких окон или явного решения ужесточить; сейчас только окна + warning (`SEARCH_ALGORITHM.md` §6).
+- **Компенсация / взыскание после `captured`** — до юр. модели.
+- **Частичный возврат / частичная выплата** — до спроса после стабильного полного money-path.
+- Показ внутреннего рейтинга в UI — до отдельного продуктового решения (после запуска отзывов 1–5).
+- `Company*` — до подтверждённой B2B-потребности.

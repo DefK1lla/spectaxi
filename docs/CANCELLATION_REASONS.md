@@ -9,8 +9,8 @@
 Набор кодов **режется по стадии**. Обозначения стадий:
 
 - `in_negotiation`, `awaiting_payment` — отклонение партнёра (обе стороны) или отмена (только клиент);
-- `planned_before_start` — плановый заказ в `in_progress` до `planned_start_at`, отмена любой стороной;
-- `in_progress` (спор), `completed` (спор) — открытие спора.
+- `planned_before_start` — плановый заказ в `scheduled` (до `planned_start_at`), отмена любой стороной;
+- `in_progress` (спор), `completed` (спор) — открытие спора (в т.ч. «не вышел на объект» — решает клиент).
 
 ## Клиент
 
