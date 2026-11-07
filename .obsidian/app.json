@@ -1,7 +1,8 @@
 {
   "alwaysUpdateLinks": true,
-  "newFileLocation": "root",
-  "attachmentFolderPath": "./attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "docs",
+  "attachmentFolderPath": "docs/attachments",
   "showLineNumber": true,
   "strictLineBreaks": false,
   "readableLineLength": true,
