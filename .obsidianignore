@@ -1,0 +1,12 @@
+# Allowlist: only root README + docs (gitignore syntax for Ignore / Advanced Exclude).
+# After `*`, re-include folders with `!*/` before whitelisting paths (Advanced Exclude).
+*
+!*/
+!README.md
+!docs/
+!docs/**
+
+# Force-hide dependency trees (even as empty shells when paired with
+# Advanced Exclude → "Hide empty folders")
+node_modules/
+**/node_modules/

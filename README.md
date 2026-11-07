@@ -4,6 +4,8 @@
 
 Продуктовые документы MVP — в [`docs/`](docs/). Скелет monorepo: `@spectaxi/api`, `@spectaxi/admin`, `@spectaxi/web`, `@spectaxi/mobile`, `@spectaxi/contracts`.
 
+**Obsidian:** открыть **корень** репо как vault. Паттерны — [`.obsidianignore`](.obsidianignore). Чтобы не торчали пустые `node_modules` — плагин **Advanced Exclude** + **Hide empty folders** (см. [`docs/README.md`](docs/README.md)).
+
 DX: `pnpm lint` · `pnpm format` · `pnpm syncpack:check` · husky + lint-staged на commit. Деплой hello: [`docs/DEPLOY_HELLO.md`](docs/DEPLOY_HELLO.md).
 
 Клиент задаёт фильтр (тип, тариф, количество, срочный без даты или плановый с датой и временем начала, точка) — система считает цену. Календаря занятости нет: по срочным заказам исполнитель виден, пока у него включён флаг «принимаю срочные заказы». Ищет ближайшие машины, шлёт запрос одному. После «принять» открываются контакты, исполнитель за сутки подтверждает условия. Пока работа не началась, срыв матча возвращает заказ к поиску. Спор — одна сущность на заказ. Типы транспорта и типы лицензий ведёт админ.
