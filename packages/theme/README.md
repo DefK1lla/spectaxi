@@ -30,4 +30,4 @@ themeToNative(themes.dark);
 
 Subpaths: `@spectaxi/theme/css`, `@spectaxi/theme/native`.
 
-Docs: [`FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md) § «Тема».
+Стилистика SpexTaxi (brand/stone) — источник правды здесь; UI-kit — Tamagui в [`@spectaxi/ui`](../ui). Docs: [`FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md) § «Тема и бренд».

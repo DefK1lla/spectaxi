@@ -1,5 +1,6 @@
 "use client";
 
+import { SpectaxiUiProvider } from "@spectaxi/ui";
 import { useEffect, type ReactNode } from "react";
 import { initBrowserSentry } from "../../sentry/init-browser-sentry";
 
@@ -9,5 +10,5 @@ export function Providers({ children }: { children: ReactNode }) {
     void initBrowserSentry();
   }, []);
 
-  return children;
+  return <SpectaxiUiProvider colorMode="light">{children}</SpectaxiUiProvider>;
 }

@@ -6,9 +6,9 @@
 
 Внешние зависимости API — порты + адаптеры (не вендор в домене): [TECH_STACK.md](./TECH_STACK.md) § «Порты и адаптеры», [BACKEND_STRUCTURE.md](./BACKEND_STRUCTURE.md) § «Порты». Образец в коде: `ObjectStorage` / S3 (`S3_*`).
 
-Дизайн-токены фронтов: [`@spectaxi/theme`](../packages/theme) — [FRONTEND_FSD.md](./FRONTEND_FSD.md) § «Тема» (CSS vars / native theme; UI-kit выбирается в apps).
+Дизайн-токены: [`@spectaxi/theme`](../packages/theme). UI-kit: **Tamagui** в [`@spectaxi/ui`](../packages/ui) — [FRONTEND_FSD.md](./FRONTEND_FSD.md) § «UI-kit»; setup [tasks/13-tamagui-ui.md](./tasks/13-tamagui-ui.md).
 
-Язык в коде (комментарии и `describe`/`it` — русский; идентификаторы — English): [NAMING.md](./NAMING.md) § «Язык в коде».
+Язык: идентификаторы — English; комментарии / Vitest / **UI-копирайт apps** — русский: [NAMING.md](./NAMING.md) § «Язык в коде». UI / FSD: [FRONTEND_FSD.md](./FRONTEND_FSD.md). Шаринг web↔mobile (TBD): [FRONTEND_SHARE_OPTIONS.md](./FRONTEND_SHARE_OPTIONS.md), задача [tasks/14-frontend-share-strategy.md](./tasks/14-frontend-share-strategy.md).
 
 ## Obsidian vault
 

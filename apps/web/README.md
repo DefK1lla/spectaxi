@@ -2,9 +2,11 @@
 
 Публичный веб SpexTaxi на Next.js (App Router).
 
-Скелет: одна страница «SpexTaxi». Клиентские сценарии (поиск, заказы) в MVP — в мобильном приложении; этот пакет — задел под лендинг / веб-клиент позже. **Не** Expo Web: карта, пуши и платежи на нативе проще держать в `apps/mobile`.
+Скелет: одна страница «SpexTaxi». Клиентские сценарии (поиск, заказы) в MVP — в **`apps/mobile`**; этот пакет — лендинг / веб-клиент позже. **Не** Expo Web.
 
-Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages` (см. [`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)).
+Когда появится веб-клиент: на телефоне — паритет layout с mobile, web — mobile first + адаптив ([`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)). Как шарить код — TBD ([`docs/FRONTEND_SHARE_OPTIONS.md`](../../docs/FRONTEND_SHARE_OPTIONS.md), task 14).
+
+Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages`.
 
 ## Запуск
 

@@ -19,12 +19,23 @@ Follow Feature-Sliced Design v2.1 (skill: `feature-sliced-design`, doc: `docs/FR
 
 See `docs/NAMING.md`. React component files: **PascalCase** (`HomePage.tsx`).
 
-## Theme
+## Theme + UI kit + brand
 
-- Visual tokens live in `@spectaxi/theme` (not in each app’s hardcoded hex).
-- Web: `themeToCssRoot` / `themeToTailwindColors`. Native: `themeToNative`.
-- Do not put cross-platform Button/Input in a shared package yet — tokens only; UI kits stay per app.
-- Doc: `docs/FRONTEND_FSD.md` § «Тема».
+- Visual tokens: `@spectaxi/theme` only — **no hardcoded hex** in apps (except via theme/primitives).
+- **Brand look (do not invent another vibe):** warm stone neutrals, soft radius, airy type; light = grey canvas + white surfaces; brand green CTA from `brandColor` / theme (`#22C76E` light, dark CTA `#34E089`). Avoid generic AI-UI (purple gradients, cold slate-only, harsh sharp cards) unless product says otherwise.
+- UI: **Tamagui** via `@spectaxi/ui` (current line; Next + Expo). Do **not** use gluestack (v5 dropped Next; v4 is legacy).
+- **`web` ↔ `mobile` on phone:** same layout — same elements in the same places. `web` is **mobile first + adaptive**.
+- **`admin`:** desktop-first; no mobile adaptive investment.
+- UI strings: **Russian only** (see `naming.mdc`).
+- MVP: client orders in **`mobile`**; `web` is landing / future web client — not Expo Web.
+- Do not add Mantine / Paper / gluestack / other kits that split platforms.
+- Doc: `docs/FRONTEND_FSD.md` § «UI-kit»; setup task `docs/tasks/13-tamagui-ui.md`.
+
+## Sharing web ↔ mobile (open)
+
+- **For now:** build the client product in **`apps/mobile`**. Do not invent a full `packages/app` / Solito layout until the share strategy is decided.
+- Sharing approach is **TBD** — `docs/FRONTEND_SHARE_OPTIONS.md` / task 14.
+- Keep `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui`. **API zod** (request/response schemas) — **only** in `@spectaxi/contracts` (shared with Nest); do not put HTTP zod in app helpers or a random shared bag. No micro-packages per helper. Public web is Next, not Expo Web.
 
 ## Colocation (обязательно)
 

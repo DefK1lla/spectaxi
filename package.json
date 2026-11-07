@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "postinstall": "pnpm --filter @spectaxi/contracts build && pnpm --filter @spectaxi/theme build",
+    "postinstall": "pnpm --filter @spectaxi/contracts build && pnpm --filter @spectaxi/theme build && pnpm --filter @spectaxi/ui generate:css",
     "prepare": "husky",
     "dev:api": "pnpm --filter @spectaxi/api dev",
     "dev:admin": "pnpm --filter @spectaxi/admin dev",
@@ -17,6 +17,7 @@
     "build:web": "pnpm --filter @spectaxi/web build",
     "build:contracts": "pnpm --filter @spectaxi/contracts build",
     "build:theme": "pnpm --filter @spectaxi/theme build",
+    "generate:ui-css": "pnpm --filter @spectaxi/ui generate:css",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",

@@ -8,9 +8,9 @@
 
 | Слой                                 | Технология                                                                              |
 | ------------------------------------ | --------------------------------------------------------------------------------------- |
-| Мобильное приложение (iOS + Android) | Expo (React Native) + TypeScript; структура **FSD v2.1**                                |
-| Публичный веб                        | Next.js (React) + TypeScript (`apps/web`; не Expo Web); **FSD v2.1**                    |
-| Админка                              | Next.js (React) + TypeScript; **FSD v2.1**                                              |
+| Мобильное приложение (iOS + Android) | Expo (React Native) + TypeScript; структура **FSD v2.1**; UI — **Tamagui**              |
+| Публичный веб                        | Next.js (React) + TypeScript (`apps/web`; не Expo Web); **FSD v2.1**; UI — **Tamagui**  |
+| Админка                              | Next.js (React) + TypeScript; **FSD v2.1**; UI — **Tamagui**                            |
 | API                                  | NestJS + TypeScript                                                                     |
 | ORM и миграции                       | Prisma ORM 7 (`prisma-client-js` + `@prisma/adapter-pg`)                                |
 | База данных                          | PostgreSQL                                                                              |
@@ -71,6 +71,7 @@ apps/
 packages/
   contracts/  @spectaxi/contracts — общие типы и zod-схемы запросов/ответов API
   theme/      @spectaxi/theme — дизайн-токены (веб CSS vars + native theme); не UI-kit
+  ui/         @spectaxi/ui — Tamagui kit (каркас; compiler — task 13)
 ```
 
 Имена пакетов: `@spectaxi/*`. Workspace: `pnpm-workspace.yaml` → `apps/*`, `packages/*`.
@@ -96,7 +97,11 @@ Mobile: заготовка `apps/mobile/eas.json` (profiles `development` / `pre
 
 `contracts` — главный выигрыш от единого языка: API, админка и приложение используют одни и те же типы.
 
-`theme` — один источник визуальных токенов для **admin / web / mobile**. Пакет не зависит от Tailwind, shadcn, NativeWind и т.п.: apps сами строят конфиг UI-библиотеки из `themeToCssRoot` / `themeToTailwindColors` / `themeToNative`. Компоненты кнопок не шарятся между Next и Expo (разный рендер); шарятся только токены. Подробнее — [`FRONTEND_FSD.md`](FRONTEND_FSD.md) § «Тема».
+`theme` — один источник визуальных токенов для **admin / web / mobile** (`themeToCssRoot` / `themeToTailwindColors` / `themeToNative`).
+
+`ui` — **Tamagui** (latest). Клиент **пока в `apps/mobile`**; шаринг с web — TBD ([`FRONTEND_SHARE_OPTIONS.md`](FRONTEND_SHARE_OPTIONS.md), task 14). Паритет / mobile-first web / admin desktop-first — [`FRONTEND_FSD.md`](FRONTEND_FSD.md). Токены — `@spectaxi/theme`. Setup — [`tasks/13-tamagui-ui.md`](tasks/13-tamagui-ui.md).
+
+**Почему не gluestack:** v5 dropped Next.js; v4 — legacy. Tamagui поддерживает Next + Expo на актуальной линейке.
 
 Фронтенд (`admin` / `web` / `mobile`): Feature-Sliced Design — [`docs/FRONTEND_FSD.md`](FRONTEND_FSD.md), скилл `.agents/skills/feature-sliced-design`.
 
@@ -292,7 +297,7 @@ Sentry ловит ошибки, логи смотрим в консоли пла
 ## 7) Порядок работ
 
 1. Каркас репозитория
-   1a. **Сделано:** monorepo pnpm (`@spectaxi/api`, `admin`, `web`, `mobile`, `contracts`, `theme`), `pnpm dev:*` / `lint` / `typecheck` / `test`, Vitest + coverage, CI GitHub Actions, `.env.example`, `eas.json`, Nest с префиксом `/api/v1` и доменными модулями (`BACKEND_STRUCTURE.md`: `HealthModule`, stub `AdminModule`), `GET /api/v1/health`, `/ready`, `/admin/health`, hello Next.js (admin :3001, web :3002) и Expo Router. `@spectaxi/theme` — токены + CSS/native адаптеры; UI-kit в apps ещё не подключён.
+   1a. **Сделано:** monorepo pnpm (`@spectaxi/api`, `admin`, `web`, `mobile`, `contracts`, `theme`, `ui`), `pnpm dev:*` / `lint` / `typecheck` / `test`, Vitest + coverage, CI GitHub Actions, `.env.example`, `eas.json`, Nest `/api/v1`, hello Next + Expo. `@spectaxi/theme` — токены; `@spectaxi/ui` — **Tamagui** + CSS vars; compiler в apps — task 13.
    1b. **Частично:** Prisma 7.10 в `apps/api` (`prisma.config.ts`, схема-заглушка без `url`, `PrismaPg` adapter; `PrismaModule` и `$connect` закомментированы — API стартует без Neon). Дальше: свой `DATABASE_URL` из Neon → раскомментировать модуль → миграции по `DOMAIN_MODEL_AND_ERD.md` → `/api/v1/ready` проверяет БД.
    1c. **Сделано (каркас):** `StorageModule` + порт `ObjectStorage` + `S3ObjectStorageAdapter`; env `S3_*` (Neon Object Storage в local/dev). Загрузки доменов ещё нет — вызовы появятся с парком/лицензиями.
    1d. Деплой «hello» — [`DEPLOY_HELLO.md`](DEPLOY_HELLO.md) + [`tasks/`](tasks/README.md). В API: `prom-client` `/metrics` + `METRICS_TOKEN`, CORS (`CORS_ORIGINS`), Sentry (`SENTRY_DSN` + filter), OpenAPI (`ENABLE_OPENAPI`); CI job `docker-api`; UptimeRobot на `/ready`.

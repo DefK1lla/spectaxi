@@ -2,9 +2,11 @@
 
 Next.js админка SpexTaxi (App Router).
 
-Сейчас скелет: одна страница «SpexTaxi Admin». Экраны лицензий, типов транспорта, споров — позже.
+Скелет: одна страница «SpexTaxi Admin». Экраны лицензий, типов транспорта, споров — позже.
 
-Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages` (см. [`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)).
+**Desktop-first:** мобильным адаптивом не занимаемся ([`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md) § «Админка»). UI-kit — **Tamagui** через `@spectaxi/ui` (task 13).
+
+Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages`.
 
 ## Запуск
 
