@@ -1,6 +1,7 @@
 # `@spectaxi/ui`
 
-Общий UI-слой SpexTaxi на **Tamagui** (актуальная линейка, Next + Expo) + токены `@spectaxi/theme`.
+Клиентский UI-слой SpexTaxi на **Tamagui** (актуальная линейка, Next + Expo) + токены `@spectaxi/theme`.  
+**Не** для `apps/admin` — там Mantine.
 
 Клиент пока в `apps/mobile`; шаринг с web — `docs/FRONTEND_SHARE_OPTIONS.md`.
 

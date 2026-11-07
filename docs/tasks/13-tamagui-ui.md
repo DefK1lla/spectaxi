@@ -2,17 +2,18 @@
 
 ## Зачем
 
-Нужен **актуальный** universal UI для Next (`admin`/`web`) + Expo (`mobile`).  
+Нужен **актуальный** universal UI для клиента: Next (`web`) + Expo (`mobile`).  
+**Admin** — отдельно на **Mantine** (не эта задача).  
 **gluestack-ui v5** официально **убрал Next.js**; v4 — legacy/alpha. Выбран **Tamagui** (latest).
 
 ## Статус
 
-- [x] Решение: Tamagui вместо gluestack (docs / rules)
+- [x] Решение: Tamagui вместо gluestack (docs / rules); admin → Mantine
 - [x] Удалён gluestack CLI-артефакт (`button/`, `gluestack-ui-provider`, `gluestack-ui.config.json`)
 - [x] `@spectaxi/ui`: `tamagui` + `@tamagui/config` **3.2.4**, `SpectaxiUiProvider`, токены brand в config
-- [x] CSS vars SpexTaxi (`styles.css` из `@spectaxi/theme`) — для web globals
+- [x] CSS vars SpexTaxi (`styles.css` из `@spectaxi/theme`) — для клиентского web
 - [ ] Compiler / Metro (`withTamagui`) в `apps/mobile`
-- [ ] Next optimize (`@tamagui/next-plugin` или CLI) в admin/web
+- [ ] Next optimize (`@tamagui/next-plugin` или CLI) в `apps/web`
 - [ ] Кастомные компоненты поверх Tamagui по мере экранов
 - [ ] Полная карта `@spectaxi/theme` → Tamagui tokens/themes (сейчас brand + surface seed)
 

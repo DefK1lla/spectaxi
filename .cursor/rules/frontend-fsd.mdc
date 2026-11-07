@@ -23,19 +23,19 @@ See `docs/NAMING.md`. React component files: **PascalCase** (`HomePage.tsx`).
 
 - Visual tokens: `@spectaxi/theme` only — **no hardcoded hex** in apps (except via theme/primitives).
 - **Brand look (do not invent another vibe):** warm stone neutrals, soft radius, airy type; light = grey canvas + white surfaces; brand green CTA from `brandColor` / theme (`#22C76E` light, dark CTA `#34E089`). Avoid generic AI-UI (purple gradients, cold slate-only, harsh sharp cards) unless product says otherwise.
-- UI: **Tamagui** via `@spectaxi/ui` (current line; Next + Expo). Do **not** use gluestack (v5 dropped Next; v4 is legacy).
+- **Client (`web` + `mobile`):** **Tamagui** via `@spectaxi/ui`. Do **not** use gluestack (v5 dropped Next; v4 is legacy).
 - **`web` ↔ `mobile` on phone:** same layout — same elements in the same places. `web` is **mobile first + adaptive**.
-- **`admin`:** desktop-first; no mobile adaptive investment.
+- **`admin`:** desktop-first; no mobile adaptive investment. UI kit — **Mantine** (web-only), themed from `@spectaxi/theme`. Do **not** pull `@spectaxi/ui` / Tamagui into admin.
 - UI strings: **Russian only** (see `naming.mdc`).
 - MVP: client orders in **`mobile`**; `web` is landing / future web client — not Expo Web.
-- Do not add Mantine / Paper / gluestack / other kits that split platforms.
-- Doc: `docs/FRONTEND_FSD.md` § «UI-kit»; setup task `docs/tasks/13-tamagui-ui.md`.
+- Do not add extra kits that split the client platforms (web/mobile). Admin may use Mantine; do not use Mantine on web/mobile.
+- Doc: `docs/FRONTEND_FSD.md` § «UI-kit»; Tamagui setup — `docs/tasks/13-tamagui-ui.md`.
 
 ## Sharing web ↔ mobile (open)
 
 - **For now:** build the client product in **`apps/mobile`**. Do not invent a full `packages/app` / Solito layout until the share strategy is decided.
 - Sharing approach is **TBD** — `docs/FRONTEND_SHARE_OPTIONS.md` / task 14.
-- Keep `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui`. **API zod** (request/response schemas) — **only** in `@spectaxi/contracts` (shared with Nest); do not put HTTP zod in app helpers or a random shared bag. No micro-packages per helper. Public web is Next, not Expo Web.
+- Keep `@spectaxi/contracts`, `@spectaxi/theme`; client UI — `@spectaxi/ui` (not in admin). **API zod** (request/response schemas) — **only** in `@spectaxi/contracts` (shared with Nest); do not put HTTP zod in app helpers or a random shared bag. No micro-packages per helper. Public web is Next, not Expo Web.
 
 ## Colocation (обязательно)
 

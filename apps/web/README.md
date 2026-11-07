@@ -4,7 +4,7 @@
 
 Скелет: одна страница «SpexTaxi». Клиентские сценарии (поиск, заказы) в MVP — в **`apps/mobile`**; этот пакет — лендинг / веб-клиент позже. **Не** Expo Web.
 
-Когда появится веб-клиент: на телефоне — паритет layout с mobile, web — mobile first + адаптив ([`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)). Как шарить код — TBD ([`docs/FRONTEND_SHARE_OPTIONS.md`](../../docs/FRONTEND_SHARE_OPTIONS.md), task 14).
+UI-kit клиента — **Tamagui** через `@spectaxi/ui` (не Mantine). Когда появится веб-клиент: на телефоне — паритет layout с mobile, web — mobile first + адаптив ([`docs/FRONTEND_FSD.md`](../../docs/FRONTEND_FSD.md)). Как шарить код — TBD ([`docs/FRONTEND_SHARE_OPTIONS.md`](../../docs/FRONTEND_SHARE_OPTIONS.md), task 14).
 
 Структура UI — **FSD v2.1**: роутинг Next в `app/`, слои в `src/_app`, `src/_pages`.
 

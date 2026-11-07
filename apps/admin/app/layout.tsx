@@ -1,3 +1,6 @@
+import "@mantine/core/styles.css";
+
+import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Providers } from "@/_app/providers";
@@ -14,7 +17,10 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="ru" data-theme="light">
+    <html lang="ru" {...mantineHtmlProps}>
+      <head>
+        <ColorSchemeScript defaultColorScheme="light" />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

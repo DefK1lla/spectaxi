@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   // Опции Next.js при необходимости.
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ["@spectaxi/ui", "@spectaxi/theme"],
+  transpilePackages: ["@spectaxi/theme"],
 };
 
 export default nextConfig;
