@@ -11,7 +11,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 @Controller("admin")
 export class AdminController {
   @Get("health")
-  @ApiOperation({ summary: "Admin surface stub health" })
+  @ApiOperation({ summary: "Заглушка health админ-поверхности" })
   getHealth(): { status: "ok" } {
     return { status: "ok" };
   }

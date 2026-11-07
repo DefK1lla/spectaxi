@@ -7,6 +7,13 @@ alwaysApply: true
 
 Источник правды: `docs/NAMING.md`.
 
+## Language in code
+
+- Identifiers (types, functions, files, folders, API `error.code`) — **English**
+- Comments and JSDoc — **Russian**
+- Vitest `describe` / `it` / `test` titles — **Russian**
+- OK in English: third-party API quotes, product/brand names, ticket refs in TODO
+
 ## Identifiers
 
 - `camelCase` — variables, functions, methods, hooks

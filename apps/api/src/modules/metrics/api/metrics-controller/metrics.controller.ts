@@ -10,8 +10,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { MetricsService } from "../../services/metrics-service/metrics.service";
 
 /**
- * Prometheus scrape endpoint. Requires `Authorization: Bearer <METRICS_TOKEN>`.
- * If METRICS_TOKEN is unset, returns 503 (misconfigured) rather than open metrics.
+ * Endpoint scrape Prometheus. Нужен `Authorization: Bearer <METRICS_TOKEN>`.
+ * Без METRICS_TOKEN — 503 (неверная конфигурация), а не открытые метрики.
  */
 @ApiTags("metrics")
 @Controller()
@@ -20,7 +20,9 @@ export class MetricsController {
 
   @Get("metrics")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Prometheus metrics (Bearer METRICS_TOKEN)" })
+  @ApiOperation({
+    summary: "Метрики Prometheus (Bearer METRICS_TOKEN)",
+  })
   @Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
   async getMetrics(
     @Headers("authorization") authorization: string | undefined,

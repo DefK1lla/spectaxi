@@ -12,8 +12,8 @@ import {
 import type { ObjectStorage, PutObjectInput } from "../../object-storage.port";
 
 /**
- * S3-compatible adapter (Neon Object Storage, R2, Selectel, Yandex, …).
- * Env: `S3_*`. Other vendors = new adapter class + bind in StorageModule.
+ * S3-совместимый адаптер (Neon Object Storage, R2, Selectel, Yandex, …).
+ * Env: `S3_*`. Другой вендор = новый класс-адаптер + bind в StorageModule.
  */
 @Injectable()
 export class S3ObjectStorageAdapter implements ObjectStorage {

@@ -31,7 +31,7 @@ describe("S3ObjectStorageAdapter", () => {
     }
   }
 
-  it("isConfigured is false without env", async () => {
+  it("isConfigured=false без env", async () => {
     rememberEnv();
     for (const key of ENV_KEYS) {
       delete process.env[key];
@@ -43,7 +43,7 @@ describe("S3ObjectStorageAdapter", () => {
     );
   });
 
-  it("isConfigured is true when S3_* are set", () => {
+  it("isConfigured=true когда заданы S3_*", () => {
     rememberEnv();
     process.env.S3_ENDPOINT = "https://example.storage";
     process.env.S3_KEY = "key";

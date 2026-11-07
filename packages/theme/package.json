@@ -1,0 +1,37 @@
+{
+  "name": "@spectaxi/theme",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./css": {
+      "types": "./dist/css-variables.d.ts",
+      "require": "./dist/css-variables.js",
+      "default": "./dist/css-variables.js"
+    },
+    "./native": {
+      "types": "./dist/native-theme.d.ts",
+      "require": "./dist/native-theme.js",
+      "default": "./dist/native-theme.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "3.2.4",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

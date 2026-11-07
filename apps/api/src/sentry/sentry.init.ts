@@ -1,7 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
 
 /**
- * Optional Sentry bootstrap. No-op when SENTRY_DSN is missing.
+ * Опциональный bootstrap Sentry. Без SENTRY_DSN — no-op.
  */
 export async function initSentry(): Promise<void> {
   const dsn = process.env.SENTRY_DSN?.trim();
@@ -24,7 +24,7 @@ export async function initSentry(): Promise<void> {
   }
 }
 
-/** Nest global filter — only when DSN was set and package loads. */
+/** Глобальный Nest-фильтр Sentry — только если задан DSN и пакет загрузился. */
 export async function setupSentryNestFilter(
   app: INestApplication,
 ): Promise<void> {

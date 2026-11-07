@@ -12,6 +12,12 @@
 
 ## Admin / Web (Vercel)
 
+### Код
+
+- [x] `@sentry/react` + init при `NEXT_PUBLIC_SENTRY_DSN` (admin/web)
+
+### Аккаунт / стенд
+
 - [ ] В Sentry — проекты (или один browser project)
 - [ ] Env на Vercel:
   ```env
@@ -22,6 +28,12 @@
 - [ ] Проверить событие (временный `throw` в клиенте / SpexTaxi Issues)
 
 ## Mobile (позже)
+
+### Код
+
+- [x] Заготовка `initNativeSentry` (no-op до native dep)
+
+### Подключение native
 
 - [ ] `npx expo install @sentry/react-native` + config plugin в `app.json`
 - [ ] `EXPO_PUBLIC_SENTRY_DSN=...`

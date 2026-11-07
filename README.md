@@ -42,6 +42,8 @@ cp apps/api/.env.example apps/api/.env         # Windows: copy apps\api\.env.exa
 
 **Порты внешних сервисов** (OTP, платежи, geo, push, scheduler…): правило и каталог в [`docs/TECH_STACK.md`](docs/TECH_STACK.md) § «Порты и адаптеры»; код адаптера — вместе с фичей, не заранее. Образец — storage. См. также [`docs/BACKEND_STRUCTURE.md`](docs/BACKEND_STRUCTURE.md), [`apps/api/README.md`](apps/api/README.md).
 
+**Тема UI:** [`packages/theme`](packages/theme) (`@spectaxi/theme`) — общие токены для admin/web/mobile; из них собирается CSS (веб) или native theme (Expo). UI-kit в apps подключается отдельно. [`docs/FRONTEND_FSD.md`](docs/FRONTEND_FSD.md) § «Тема».
+
 ## Запуск (dev)
 
 Из корня репозитория:
@@ -101,8 +103,8 @@ Unit-тесты — Vitest; файлы рядом с кодом (`*.spec.ts` / `
 - [CANCELLED_ORDERS.md](docs/CANCELLED_ORDERS.md) — отмена и «такой же заказ»
 - [SERVICE_RULES.md](docs/SERVICE_RULES.md) — правила сервиса и блокировка
 - [TECH_STACK.md](docs/TECH_STACK.md) — стек, сервисы, цены и порядок запуска
-- [FRONTEND_FSD.md](docs/FRONTEND_FSD.md) — Feature-Sliced Design на фронтенде
+- [FRONTEND_FSD.md](docs/FRONTEND_FSD.md) — Feature-Sliced Design на фронтенде + `@spectaxi/theme`
 - [BACKEND_STRUCTURE.md](docs/BACKEND_STRUCTURE.md) — доменные Nest-модули API + порт `ObjectStorage`
-- [NAMING.md](docs/NAMING.md) — имена файлов, папок и идентификаторов
+- [NAMING.md](docs/NAMING.md) — имена файлов/папок/идентификаторов; комментарии и `describe`/`it` на русском
 - [DEPLOY_HELLO.md](docs/DEPLOY_HELLO.md) — деплой hello: DADA (API) + Vercel (admin/web)
 - [tasks/](docs/tasks/) — ручные задачи (DADA, Vercel, Sentry, Grafana, UptimeRobot)

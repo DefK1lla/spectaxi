@@ -9,8 +9,8 @@ export type PutObjectInput = {
 };
 
 /**
- * Port for file storage. Domains inject `OBJECT_STORAGE` — never S3/AWS types.
- * Swap adapters (S3-compatible, local disk, …) in StorageModule only.
+ * Порт файлового хранилища. Домены инжектят `OBJECT_STORAGE` — без типов S3/AWS.
+ * Смена адаптера (S3-compatible, локальный диск, …) только в StorageModule.
  */
 export interface ObjectStorage {
   isConfigured(): boolean;

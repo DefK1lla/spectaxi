@@ -2,8 +2,8 @@ import type { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 /**
- * OpenAPI/Swagger prep. Enabled only when ENABLE_OPENAPI=true.
- * Spec grows as controllers get @ApiTags / @Api* decorators.
+ * Подготовка OpenAPI/Swagger. Включается только при ENABLE_OPENAPI=true.
+ * Спека растёт по мере `@ApiTags` / `@Api*` на контроллерах.
  */
 export function setupOpenApi(app: INestApplication): void {
   if (process.env.ENABLE_OPENAPI !== "true") {
@@ -13,7 +13,7 @@ export function setupOpenApi(app: INestApplication): void {
   const config = new DocumentBuilder()
     .setTitle("SpexTaxi API")
     .setDescription(
-      "MVP REST API (`/api/v1`). Draft — contracts also in @spectaxi/contracts.",
+      "MVP REST API (`/api/v1`). Черновик — контракты также в @spectaxi/contracts.",
     )
     .setVersion("0.0.0")
     .addBearerAuth()

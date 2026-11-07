@@ -17,6 +17,12 @@
 
 ## Что сделать
 
+### Код
+
+- [x] `initSentry` + Nest `SentryGlobalFilter` при наличии `SENTRY_DSN` (в репо)
+
+### Аккаунт / стенд
+
 - [ ] Аккаунт [Sentry](https://sentry.io) (Developer / Free)
 - [ ] Create project → **Node.js / NestJS** (или Node)
 - [ ] Скопировать **DSN**

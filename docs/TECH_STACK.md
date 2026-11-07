@@ -70,6 +70,7 @@ apps/
   mobile/   @spectaxi/mobile — Expo + FSD: клиент и исполнитель в одном приложении (current_mode)
 packages/
   contracts/  @spectaxi/contracts — общие типы и zod-схемы запросов/ответов API
+  theme/      @spectaxi/theme — дизайн-токены (веб CSS vars + native theme); не UI-kit
 ```
 
 Имена пакетов: `@spectaxi/*`. Workspace: `pnpm-workspace.yaml` → `apps/*`, `packages/*`.
@@ -94,6 +95,8 @@ Mobile: заготовка `apps/mobile/eas.json` (profiles `development` / `pre
 Новые apps подхватываются через `apps/*` — добавить пакет и скрипт `dev:…` в корневой `package.json`.
 
 `contracts` — главный выигрыш от единого языка: API, админка и приложение используют одни и те же типы.
+
+`theme` — один источник визуальных токенов для **admin / web / mobile**. Пакет не зависит от Tailwind, shadcn, NativeWind и т.п.: apps сами строят конфиг UI-библиотеки из `themeToCssRoot` / `themeToTailwindColors` / `themeToNative`. Компоненты кнопок не шарятся между Next и Expo (разный рендер); шарятся только токены. Подробнее — [`FRONTEND_FSD.md`](FRONTEND_FSD.md) § «Тема».
 
 Фронтенд (`admin` / `web` / `mobile`): Feature-Sliced Design — [`docs/FRONTEND_FSD.md`](FRONTEND_FSD.md), скилл `.agents/skills/feature-sliced-design`.
 
@@ -289,7 +292,7 @@ Sentry ловит ошибки, логи смотрим в консоли пла
 ## 7) Порядок работ
 
 1. Каркас репозитория
-   1a. **Сделано:** monorepo pnpm (`@spectaxi/api`, `admin`, `web`, `mobile`, `contracts`), `pnpm dev:*` / `lint` / `typecheck` / `test`, Vitest + coverage, CI GitHub Actions, `.env.example`, `eas.json`, Nest с префиксом `/api/v1` и доменными модулями (`BACKEND_STRUCTURE.md`: `HealthModule`, stub `AdminModule`), `GET /api/v1/health`, `/ready`, `/admin/health`, hello Next.js (admin :3001, web :3002) и Expo Router.
+   1a. **Сделано:** monorepo pnpm (`@spectaxi/api`, `admin`, `web`, `mobile`, `contracts`, `theme`), `pnpm dev:*` / `lint` / `typecheck` / `test`, Vitest + coverage, CI GitHub Actions, `.env.example`, `eas.json`, Nest с префиксом `/api/v1` и доменными модулями (`BACKEND_STRUCTURE.md`: `HealthModule`, stub `AdminModule`), `GET /api/v1/health`, `/ready`, `/admin/health`, hello Next.js (admin :3001, web :3002) и Expo Router. `@spectaxi/theme` — токены + CSS/native адаптеры; UI-kit в apps ещё не подключён.
    1b. **Частично:** Prisma 7.10 в `apps/api` (`prisma.config.ts`, схема-заглушка без `url`, `PrismaPg` adapter; `PrismaModule` и `$connect` закомментированы — API стартует без Neon). Дальше: свой `DATABASE_URL` из Neon → раскомментировать модуль → миграции по `DOMAIN_MODEL_AND_ERD.md` → `/api/v1/ready` проверяет БД.
    1c. **Сделано (каркас):** `StorageModule` + порт `ObjectStorage` + `S3ObjectStorageAdapter`; env `S3_*` (Neon Object Storage в local/dev). Загрузки доменов ещё нет — вызовы появятся с парком/лицензиями.
    1d. Деплой «hello» — [`DEPLOY_HELLO.md`](DEPLOY_HELLO.md) + [`tasks/`](tasks/README.md). В API: `prom-client` `/metrics` + `METRICS_TOKEN`, CORS (`CORS_ORIGINS`), Sentry (`SENTRY_DSN` + filter), OpenAPI (`ENABLE_OPENAPI`); CI job `docker-api`; UptimeRobot на `/ready`.

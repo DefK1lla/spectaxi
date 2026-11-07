@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadObjectStorageConfig } from "./load-object-storage-config";
 
 describe("loadObjectStorageConfig", () => {
-  it("returns null when required vars are missing", () => {
+  it("возвращает null, если нет обязательных переменных", () => {
     expect(loadObjectStorageConfig({})).toBeNull();
     expect(
       loadObjectStorageConfig({
@@ -12,7 +12,7 @@ describe("loadObjectStorageConfig", () => {
     ).toBeNull();
   });
 
-  it("maps S3_* env (Neon / R2 / …)", () => {
+  it("мапит S3_* env (Neon / R2 / …)", () => {
     expect(
       loadObjectStorageConfig({
         S3_ENDPOINT: "https://example.storage/ ",
@@ -32,7 +32,7 @@ describe("loadObjectStorageConfig", () => {
     });
   });
 
-  it("defaults forcePathStyle to true and region to auto", () => {
+  it("по умолчанию forcePathStyle=true и region=auto", () => {
     expect(
       loadObjectStorageConfig({
         S3_ENDPOINT: "https://example.storage",
@@ -46,7 +46,7 @@ describe("loadObjectStorageConfig", () => {
     });
   });
 
-  it("disables forcePathStyle when explicitly false", () => {
+  it("выключает forcePathStyle при явном false", () => {
     expect(
       loadObjectStorageConfig({
         S3_ENDPOINT: "https://example.storage",

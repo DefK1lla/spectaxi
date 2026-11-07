@@ -8,9 +8,9 @@ export type ObjectStorageConfig = {
 };
 
 /**
- * S3-compatible object storage (Neon Object Storage, Cloudflare R2,
- * Selectel / Yandex / Timeweb S3, …). Not tied to Amazon AWS as a vendor —
- * only the S3 API + `@aws-sdk/client-s3` with a custom endpoint.
+ * Конфиг S3-совместимого хранилища (Neon Object Storage, Cloudflare R2,
+ * Selectel / Yandex / Timeweb S3, …). Не привязка к Amazon как вендору —
+ * только S3 API + `@aws-sdk/client-s3` с кастомным endpoint.
  */
 export function loadObjectStorageConfig(
   env: NodeJS.ProcessEnv = process.env,
