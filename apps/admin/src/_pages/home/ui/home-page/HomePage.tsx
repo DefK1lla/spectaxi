@@ -1,7 +1,11 @@
+import { Center, Title } from "@mantine/core";
+
 export function HomePage() {
   return (
-    <main className="spectaxi-home">
-      <h1 className="spectaxi-home__title">SpexTaxi Admin</h1>
-    </main>
+    <Center component="main" mih="100vh" p="xl">
+      <Title order={1} c="brand">
+        SpexTaxi Admin
+      </Title>
+    </Center>
   );
 }

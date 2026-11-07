@@ -44,7 +44,7 @@ cp apps/api/.env.example apps/api/.env         # Windows: copy apps\api\.env.exa
 
 **Порты внешних сервисов** (OTP, платежи, geo, push, scheduler…): правило и каталог в [`docs/TECH_STACK.md`](docs/TECH_STACK.md) § «Порты и адаптеры»; код адаптера — вместе с фичей, не заранее. Образец — storage. См. также [`docs/BACKEND_STRUCTURE.md`](docs/BACKEND_STRUCTURE.md), [`apps/api/README.md`](apps/api/README.md).
 
-**Тема + UI:** [`packages/theme`](packages/theme) — токены; [`packages/ui`](packages/ui) — **Tamagui** ([`docs/tasks/13-tamagui-ui.md`](docs/tasks/13-tamagui-ui.md)). Клиент **пока в `apps/mobile`**; шаринг web — TBD (task 14). FSD: [`docs/FRONTEND_FSD.md`](docs/FRONTEND_FSD.md).
+**Тема + UI:** [`packages/theme`](packages/theme) — токены; клиент — **Tamagui** в [`packages/ui`](packages/ui) ([`docs/tasks/13-tamagui-ui.md`](docs/tasks/13-tamagui-ui.md)); **admin — Mantine**. Клиент **пока в `apps/mobile`**; шаринг web — TBD (task 14). FSD: [`docs/FRONTEND_FSD.md`](docs/FRONTEND_FSD.md).
 
 ## Запуск (dev)
 
