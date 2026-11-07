@@ -28,12 +28,7 @@ export {
   type ThemeName,
 } from "./theme";
 
-export {
-  darkTheme,
-  getTheme,
-  lightTheme,
-  themes,
-} from "./themes";
+export { darkTheme, getTheme, lightTheme, themes } from "./themes";
 
 export {
   themesToCssDocument,
