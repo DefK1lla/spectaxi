@@ -1,5 +1,5 @@
-# Docs
+# SpexTaxi docs
 
-Продуктовые и технические спецификации SpexTaxi (MVP).
+Продуктовые и технические спецификации MVP.
 
-Корень репозитория открывается как Obsidian vault — см. корневой [`README.md`](../README.md).
+Открывать эту папку как **Obsidian vault** (`File → Open folder as vault` → `docs/`). Shared-конфиг в `.obsidian/` (граф, backlinks, outline); личный `workspace.json` не коммитим.
