@@ -88,16 +88,16 @@ _app/providers/
 
 ## Где что класть (кратко)
 
-| Что                                         | Куда                                |
-| ------------------------------------------- | ----------------------------------- |
-| Экран / логика одного маршрута              | `_pages/<slice>/`                   |
-| Переиспользуемое действие пользователя      | `features/<slice>/`                 |
-| Доменная модель с UI/api нескольких экранов | `entities/<slice>/`                 |
-| Утилиты / http-клиент без бизнес-правил     | app `shared/...`                    |
-| Провайдеры, глобальные стили                | `_app/`                             |
-| Дизайн-токены (все фронты)                  | `@spectaxi/theme`                   |
-| UI-примитивы клиента (Tamagui)              | `@spectaxi/ui`                      |
-| UI админки (Mantine)                        | `apps/admin` (+ `shared/theme` map) |
+| Что                                         | Куда                                                  |
+| ------------------------------------------- | ----------------------------------------------------- |
+| Экран / логика одного маршрута              | `_pages/<slice>/`                                     |
+| Переиспользуемое действие пользователя      | `features/<slice>/`                                   |
+| Доменная модель с UI/api нескольких экранов | `entities/<slice>/`                                   |
+| Утилиты / http-клиент без бизнес-правил     | app `shared/...`                                      |
+| Провайдеры, глобальные стили                | `_app/`                                               |
+| Дизайн-токены (все фронты)                  | `@spectaxi/theme`                                     |
+| UI клиента (Tamagui)                        | `@spectaxi/ui` (provider/обёртки) + `tamagui` (сырые) |
+| UI админки (Mantine)                        | `apps/admin` (+ `shared/theme` map)                   |
 
 Подробности и деревья решений — в скилле `feature-sliced-design` и на [fsd.how](https://fsd.how).
 
@@ -107,12 +107,13 @@ _app/providers/
 
 ### Клиент: Tamagui (`web` + `mobile`)
 
-| Решение    | Деталь                                                                                           |
-| ---------- | ------------------------------------------------------------------------------------------------ |
-| Библиотека | **Tamagui** в `apps/web` и `apps/mobile` (актуальная линейка, Next + Expo)                       |
-| Токены     | `@spectaxi/theme` → Tamagui config / CSS vars                                                    |
-| Пакет      | `packages/ui` (`@spectaxi/ui`) — `SpectaxiUiProvider` (`TamaguiProvider`) + re-export primitives |
-| Не берём   | **gluestack-ui**: v5 dropped Next; v4 — legacy/alpha; **Mantine** на клиенте                     |
+| Решение         | Деталь                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Библиотека      | **Tamagui** в `apps/web` и `apps/mobile` (актуальная линейка, Next + Expo)                                       |
+| Токены          | `@spectaxi/theme` → Tamagui config / CSS vars                                                                    |
+| Пакет           | `packages/ui` (`@spectaxi/ui`) — `SpectaxiUiProvider` + config + **свои** обёртки                                |
+| Сырые примитивы | `Button` / `YStack` / … **без** обёртки — `import { … } from "tamagui"` (не passthrough из `@spectaxi/ui`)       |
+| Не берём        | **gluestack-ui**: v5 dropped Next; v4 — legacy/alpha; **Mantine** на клиенте; голый re-export Tamagui «как есть» |
 
 #### Паритет web ↔ mobile (телефон)
 
@@ -120,7 +121,7 @@ _app/providers/
 
 - **`apps/web` — mobile first + адаптив.** Телефонная версия — **важнее и эталонна** (паритет с `mobile`). На десктопе/планшете layout **расширяется** и должен выглядеть нормально (не «узкая колонка как на телефоне» и не отдельный продукт с другой IA) — progressive enhancement от phone-layout.
 - **`apps/mobile` — эталон композиции** для клиентских сценариев на phone viewport; web на этой ширине не меняет порядок/набор блоков относительно mobile.
-- Общий kit (Tamagui в `@spectaxi/ui`) + одни токены — обязательны, чтобы паритет не разъезжался.
+- Один Tamagui + `@spectaxi/theme` + свои обёртки в `@spectaxi/ui` — чтобы паритет не разъезжался.
 
 ### Админка: Mantine (`apps/admin`)
 
@@ -134,7 +135,7 @@ _app/providers/
 
 ### Общие правила UI
 
-1. **Клиент** (`web` / `mobile`): экраны из `@spectaxi/ui` (Tamagui), не из случайных npm UI-kit.
+1. **Клиент** (`web` / `mobile`): provider/свои обёртки — `@spectaxi/ui`; немодифицированные примитивы — `tamagui`; токены — `@spectaxi/theme`. Не подключать случайные npm UI-kit.
 2. **Admin**: экраны из Mantine; локальный `shared/ui` — обёртки или одноразовые куски.
 3. Не хардкодить hex — семантика из `@spectaxi/theme` (и map в Tamagui / Mantine theme).
 4. Не тащить Mantine на web/mobile и не тащить Tamagui в admin.
@@ -162,7 +163,7 @@ packages/theme/
 2. **Клиентский web** (`apps/web`): CSS из `@spectaxi/ui/styles.css` (`themesToCssDocument`); переключение `document.documentElement.dataset.theme = "dark" | "light"`.
 3. **Admin**: токены → Mantine `createTheme` (`src/shared/theme/mantine-theme`); без `@spectaxi/ui`.
 4. **Mobile**: `nativeThemes.light | .dark` / `themeToNative` → StyleSheet / Tamagui themes (маппинг токенов — task 13).
-5. Клиентские UI-компоненты — через `@spectaxi/ui` (Tamagui); admin — через Mantine.
+5. Клиент: свои обёртки — `@spectaxi/ui`; сырой Tamagui — из `tamagui`; admin — Mantine.
 6. Доводка Tamagui compiler/Metro/Next — [`tasks/13-tamagui-ui.md`](./tasks/13-tamagui-ui.md).
 
 ## Общий код web ↔ mobile
@@ -171,7 +172,7 @@ packages/theme/
 
 Варианты структур и ссылки на стартеры: [`FRONTEND_SHARE_OPTIONS.md`](./FRONTEND_SHARE_OPTIONS.md). Когда решение принято — зафиксировать здесь и пометить тот файл «решено».
 
-Уже общие (не отменять): `@spectaxi/contracts`, `@spectaxi/theme`; клиентский UI — `@spectaxi/ui` (Tamagui). Admin UI — Mantine в `apps/admin`, не через `@spectaxi/ui`. API-zod — только в `contracts`. Не плодить микропакеты на каждый хелпер. Публичный веб — Next (`apps/web`), не Expo Web. Admin — отдельно, desktop-first.
+Уже общие (не отменять): `@spectaxi/contracts`, `@spectaxi/theme`; клиент — `@spectaxi/ui` (provider/обёртки) + `tamagui`. Admin UI — Mantine в `apps/admin`, не через `@spectaxi/ui`. API-zod — только в `contracts`. Не плодить микропакеты на каждый хелпер. Публичный веб — Next (`apps/web`), не Expo Web. Admin — отдельно, desktop-first.
 
 Паритет на телефоне и mobile-first web — см. § «UI-kit»; к выносу экранов/фич в packages не обязывает, пока шаринг не выбран.
 

@@ -411,13 +411,16 @@ importers:
       react-native-worklets:
         specifier: 0.13.0
         version: 0.13.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)
+      tamagui:
+        specifier: 3.2.4
+        version: 3.2.4(0b2e955b809bd3ff322a7d3bb46de395)
     devDependencies:
       '@types/react':
         specifier: ~19.3.0
         version: 19.3.0
       '@vitest/coverage-v8':
         specifier: 3.2.4
-        version: 3.2.4(supports-color@8.1.1)(vitest@3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1))
+        version: 3.2.4(supports-color@8.1.1)(vitest@3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(sugarss@5.0.2(postcss@8.5.32))(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1))
       eslint:
         specifier: 9.39.1
         version: 9.39.1(jiti@2.7.0)(supports-color@8.1.1)
@@ -435,7 +438,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 3.2.4
-        version: 3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1)
+        version: 3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(sugarss@5.0.2(postcss@8.5.32))(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1)
 
   apps/web:
     dependencies:
@@ -457,6 +460,9 @@ importers:
       react-dom:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
+      tamagui:
+        specifier: 3.2.4
+        version: 3.2.4(0b2e955b809bd3ff322a7d3bb46de395)
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.9.1
@@ -475,10 +481,10 @@ importers:
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
         specifier: ^5.0.4
-        version: 5.2.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1))
+        version: 5.2.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(sugarss@5.0.2(postcss@8.5.32))(terser@5.51.2)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 3.2.4
-        version: 3.2.4(supports-color@8.1.1)(vitest@3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1))
+        version: 3.2.4(supports-color@8.1.1)(vitest@3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(sugarss@5.0.2(postcss@8.5.32))(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1))
       eslint:
         specifier: 9.39.1
         version: 9.39.1(jiti@2.7.0)(supports-color@8.1.1)
@@ -499,7 +505,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 3.2.4
-        version: 3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1)
+        version: 3.2.4(@types/node@24.19.2)(jiti@2.7.0)(jsdom@27.4.0(supports-color@8.1.1))(lightningcss@1.33.0)(sugarss@5.0.2(postcss@8.5.32))(supports-color@8.1.1)(terser@5.51.2)(yaml@2.9.1)
 
   packages/contracts:
     dependencies:
@@ -13428,18 +13434,6 @@ snapshots:
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
       vite: 7.3.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(sugarss@5.0.2(postcss@8.5.32))(terser@5.51.2)(yaml@2.9.1)
-    transitivePeerDependencies:
-      - supports-color
-
-  '@vitejs/plugin-react@5.2.0(supports-color@8.1.1)(vite@7.3.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1))':
-    dependencies:
-      '@babel/core': 7.29.7(supports-color@8.1.1)
-      '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7(supports-color@8.1.1))
-      '@babel/plugin-transform-react-jsx-source': 7.29.7(@babel/core@7.29.7(supports-color@8.1.1))
-      '@rolldown/pluginutils': 1.0.0-rc.3
-      '@types/babel__core': 7.20.5
-      react-refresh: 0.18.0
-      vite: 7.3.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1)
     transitivePeerDependencies:
       - supports-color
 

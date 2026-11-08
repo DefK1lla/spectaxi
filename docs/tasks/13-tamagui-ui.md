@@ -10,11 +10,12 @@
 
 - [x] Решение: Tamagui вместо gluestack (docs / rules); admin → Mantine
 - [x] Удалён gluestack CLI-артефакт (`button/`, `gluestack-ui-provider`, `gluestack-ui.config.json`)
-- [x] `@spectaxi/ui`: `tamagui` + `@tamagui/config` **3.2.4**, `SpectaxiUiProvider`, токены brand в config
+- [x] `@spectaxi/ui`: `tamagui` + `@tamagui/config` **3.2.4**, `SpectaxiUiProvider`, config
 - [x] CSS vars SpexTaxi (`styles.css` из `@spectaxi/theme`) — для клиентского web
+- [x] Политика: **нет** passthrough re-export сырых Tamagui-компонентов без своей обёртки (apps → `tamagui`)
 - [ ] Compiler / Metro (`withTamagui`) в `apps/mobile`
 - [ ] Next optimize (`@tamagui/next-plugin` или CLI) в `apps/web`
-- [ ] Кастомные компоненты поверх Tamagui по мере экранов
+- [ ] Кастомные компоненты поверх Tamagui по мере экранов (тогда export из `@spectaxi/ui`)
 - [ ] Полная карта `@spectaxi/theme` → Tamagui tokens/themes (сейчас brand + surface seed)
 
 ## Команды

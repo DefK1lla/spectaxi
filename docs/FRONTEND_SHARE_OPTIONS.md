@@ -4,7 +4,7 @@
 
 **Задача:** [`tasks/14-frontend-share-strategy.md`](./tasks/14-frontend-share-strategy.md) — сделать выбор и зафиксировать его здесь.
 
-**Пока действует:** клиентские фичи и экраны — в mobile (FSD). `web` — лендинг / тонкий клиент, без обязательного выноса продукта в `packages/`. Уже есть: `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui` (**Tamagui** kit). **Admin вне этого шаринга** — Mantine + `@spectaxi/theme`.
+**Пока действует:** клиентские фичи и экраны — в mobile (FSD). `web` — лендинг / тонкий клиент, без обязательного выноса продукта в `packages/`. Уже есть: `@spectaxi/contracts`, `@spectaxi/theme`, `@spectaxi/ui` (provider/обёртки) + `tamagui`. **Admin вне этого шаринга** — Mantine + `@spectaxi/theme`.
 
 Цель на потом: один продукт на телефоне (паритет layout), web — mobile first + адаптив; admin — desktop-first (отдельный kit). Как именно класть общее **web↔mobile** в monorepo — выбрать из вариантов ниже (или смесь).
 

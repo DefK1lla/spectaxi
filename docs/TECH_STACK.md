@@ -71,7 +71,7 @@ apps/
 packages/
   contracts/  @spectaxi/contracts — общие типы и zod-схемы запросов/ответов API
   theme/      @spectaxi/theme — дизайн-токены (веб CSS vars + native theme); не UI-kit
-  ui/         @spectaxi/ui — Tamagui kit (каркас; compiler — task 13)
+  ui/         @spectaxi/ui — provider/config + свои обёртки (сырой Tamagui — из `tamagui`)
 ```
 
 Имена пакетов: `@spectaxi/*`. Workspace: `pnpm-workspace.yaml` → `apps/*`, `packages/*`.
@@ -99,7 +99,7 @@ Mobile: заготовка `apps/mobile/eas.json` (profiles `development` / `pre
 
 `theme` — один источник визуальных токенов для **admin / web / mobile** (`themeToCssRoot` / `themeToTailwindColors` / `themeToNative`).
 
-`ui` — **Tamagui** (latest) для **web + mobile**. Клиент **пока в `apps/mobile`**; шаринг с web — TBD ([`FRONTEND_SHARE_OPTIONS.md`](FRONTEND_SHARE_OPTIONS.md), task 14). **Admin** — **Mantine** (desktop), токены из `@spectaxi/theme`, без `@spectaxi/ui`. Паритет / mobile-first web / admin desktop-first — [`FRONTEND_FSD.md`](FRONTEND_FSD.md). Setup Tamagui — [`tasks/13-tamagui-ui.md`](tasks/13-tamagui-ui.md).
+`ui` — provider/config + **свои** обёртки над Tamagui для **web + mobile**; немодифицированные примитивы — `import from "tamagui"`. Клиент **пока в `apps/mobile`**; шаринг с web — TBD ([`FRONTEND_SHARE_OPTIONS.md`](FRONTEND_SHARE_OPTIONS.md), task 14). **Admin** — **Mantine** (desktop), токены из `@spectaxi/theme`, без `@spectaxi/ui`. Паритет / mobile-first web / admin desktop-first — [`FRONTEND_FSD.md`](FRONTEND_FSD.md). Setup — [`tasks/13-tamagui-ui.md`](tasks/13-tamagui-ui.md).
 
 **Почему не gluestack:** v5 dropped Next.js; v4 — legacy. Tamagui — клиент (Next + Expo). Admin сознательно на Mantine, не на universal kit.
 

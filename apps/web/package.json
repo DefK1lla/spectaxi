@@ -18,7 +18,8 @@
     "@spectaxi/ui": "workspace:*",
     "next": "16.4.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "tamagui": "3.2.4"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

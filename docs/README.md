@@ -6,7 +6,7 @@
 
 Внешние зависимости API — порты + адаптеры (не вендор в домене): [TECH_STACK.md](./TECH_STACK.md) § «Порты и адаптеры», [BACKEND_STRUCTURE.md](./BACKEND_STRUCTURE.md) § «Порты». Образец в коде: `ObjectStorage` / S3 (`S3_*`).
 
-Дизайн-токены: [`@spectaxi/theme`](../packages/theme). Клиентский UI-kit: **Tamagui** в [`@spectaxi/ui`](../packages/ui); админка: **Mantine** — [FRONTEND_FSD.md](./FRONTEND_FSD.md) § «UI-kit»; Tamagui setup [tasks/13-tamagui-ui.md](./tasks/13-tamagui-ui.md).
+Дизайн-токены: [`@spectaxi/theme`](../packages/theme). Клиент: **Tamagui** — provider/обёртки в [`@spectaxi/ui`](../packages/ui), сырые компоненты из `tamagui`; админка: **Mantine** — [FRONTEND_FSD.md](./FRONTEND_FSD.md) § «UI-kit»; setup [tasks/13-tamagui-ui.md](./tasks/13-tamagui-ui.md).
 
 Язык: идентификаторы — English; комментарии / Vitest / **UI-копирайт apps** — русский: [NAMING.md](./NAMING.md) § «Язык в коде». UI / FSD: [FRONTEND_FSD.md](./FRONTEND_FSD.md). Шаринг web↔mobile (TBD): [FRONTEND_SHARE_OPTIONS.md](./FRONTEND_SHARE_OPTIONS.md), задача [tasks/14-frontend-share-strategy.md](./tasks/14-frontend-share-strategy.md).
 
